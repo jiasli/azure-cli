@@ -654,3 +654,13 @@ def _ssl_context():
 def urlretrieve(url):
     req = urlopen(url, context=_ssl_context())
     return req.read()
+
+
+def az_command(cli_ctx, command: str):
+    import shlex
+    from io import StringIO
+    stdout_buf = StringIO()
+    exit_code = cli_ctx.invoke(shlex.split(command), out_file=stdout_buf) or 0
+    output = stdout_buf.getvalue()
+    stdout_buf.close()
+    return output

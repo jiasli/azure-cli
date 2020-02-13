@@ -694,6 +694,7 @@ def load_command_table(self, _):
     with self.command_group('network private-link-service connection', network_private_link_service_sdk) as g:
         g.command('delete', 'delete_private_endpoint_connection')
         g.custom_command('update', 'update_private_endpoint_connection')
+        g.custom_command('approve', 'approve_private_endpoint_connection')
 
     # TODO: Due to service limitation.
     # with self.command_group('network private-link-service ip-configs', network_private_link_service_sdk) as g:

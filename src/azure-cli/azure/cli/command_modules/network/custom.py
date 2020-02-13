@@ -2526,6 +2526,15 @@ def update_private_endpoint_connection(cmd, resource_group_name, service_name, p
     return client.update_private_endpoint_connection(resource_group_name, service_name, pe_connection_name, pe_connection)  # pylint: disable=line-too-long
 
 
+def approve_private_endpoint_connection(cmd, resource_id):
+    from azure.cli.core.util import az_command
+    import json
+    alias_cmd = f'keyvault private-endpoint-connection approve --id "{resource_id}"'
+    logger.warning("Calling alias command: az %s", alias_cmd)
+    result = az_command(cmd.cli_ctx, alias_cmd)
+    return json.loads(result)
+
+
 def add_private_link_services_ipconfig(cmd, resource_group_name, service_name,
                                        private_ip_address=None, private_ip_allocation_method=None,
                                        private_ip_address_version=None,
