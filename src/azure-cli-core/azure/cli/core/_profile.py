@@ -925,7 +925,7 @@ class SubscriptionFinder(object):
         from azure.identity import AuthenticationRequiredError, ClientSecretCredential
         sp_cred = ClientSecretCredential(tenant, client_id, sp_auth.secret)
 
-        token_entry = sp_cred.get_token('https://management.azure.com/.default')
+        token_entry = sp_cred.get_token(resource)
 
         self.user_id = client_id
         self.msal_credential = sp_cred
