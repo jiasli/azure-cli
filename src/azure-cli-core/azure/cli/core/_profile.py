@@ -171,6 +171,7 @@ class Profile(object):
 
         self._management_resource_uri = self.cli_ctx.cloud.endpoints.management
         self._ad_resource_uri = self.cli_ctx.cloud.endpoints.active_directory_resource_id
+        self._msal_scope = self.cli_ctx.cloud.endpoints.active_directory_resource_id + '/.default'
         self._ad = self.cli_ctx.cloud.endpoints.active_directory
         self._msi_creds = None
 
@@ -192,13 +193,13 @@ class Profile(object):
             subscription_finder = SubscriptionFinder(self.cli_ctx,
                                                      self.auth_ctx_factory,
                                                      self._creds_cache.adal_token_cache)
-        # MSAL : login
         if interactive:
             if not use_device_code and (in_cloud_console() or not can_launch_browser()):
                 logger.info('Detect no GUI is available, so fall back to device code')
                 use_device_code = True
 
             if not use_device_code:
+                from azure.identity import CredentialUnavailableError
                 try:
                     authority_url, _ = _get_authority_url(self.cli_ctx, tenant)
                     # Write the MSAL token cache
@@ -206,14 +207,13 @@ class Profile(object):
                     subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
                     # subscriptions = subscription_finder.find_through_authorization_code_flow(
                     #     tenant, self._ad_resource_uri, authority_url)
-
-                except RuntimeError:
+                except CredentialUnavailableError:
                     use_device_code = True
                     logger.warning('Not able to launch a browser to log you in, falling back to device code...')
 
             if use_device_code:
-                subscriptions = subscription_finder.find_through_interactive_flow(
-                    tenant, self._ad_resource_uri)
+                credential, auth_profile = self.login_with_device_code(tenant)
+                subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
         else:
             if is_service_principal:
                 if not tenant:
@@ -225,8 +225,11 @@ class Profile(object):
                 #     username, sp_auth, tenant, self._ad_resource_uri)
 
             else:
-                subscriptions = subscription_finder.find_from_user_account(
-                    username, password, tenant, self._ad_resource_uri)
+                credential, auth_profile = self.login_with_username_password(username, password, tenant)
+                if tenant:
+                    subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
+                else:
+                    subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
 
         if not allow_no_subscriptions and not subscriptions:
             if username:
@@ -266,18 +269,18 @@ class Profile(object):
             credential, auth_profile = InteractiveBrowserCredential.authenticate(
                 client_id=_CLIENT_ID,
                 silent_auth_only=True,
-                scope='https://management.azure.com/.default',
+                scope=self._msal_scope,
                 tenant_id=tenant
             )
         else:
             credential, auth_profile = InteractiveBrowserCredential.authenticate(
                 client_id=_CLIENT_ID,
                 silent_auth_only=True,
-                scope='https://management.azure.com/.default'
+                scope=self._msal_scope
             )
             auth_profile.tenant_id = 'organizations'
         # serialize the profile to JSON, including all keyword arguments
-        profile_json = auth_profile.serialize(extra='args', serialized='also')
+        profile_json = auth_profile.serialize()
         with open(_PROFILE_PATH, 'w') as f:
             f.write(profile_json)
 
@@ -294,13 +297,30 @@ class Profile(object):
         #     result = self._find_using_specific_tenant(tenant, token_entry.token)
         # return result
 
-    def login_with_device_code(self):
-        # DeviceCodeCredential
-        pass
+    def login_with_device_code(self, tenant):
+        from azure.identity import AuthenticationRequiredError, DeviceCodeCredential
+        message = 'To sign in, use a web browser to open the page {} and enter the code {} to authenticate.'
+        prompt_callback=lambda verification_uri, user_code, expires_on: \
+            logger.warning(message.format(verification_uri, user_code))
+        if tenant:
+            cred, auth_profile = DeviceCodeCredential.authenticate(_CLIENT_ID,
+                                                                   scope=self._msal_scope,
+                                                                   tenant_id=tenant,
+                                                                   prompt_callback=prompt_callback)
+        else:
+            cred, auth_profile = DeviceCodeCredential.authenticate(_CLIENT_ID,
+                                                                   scope=self._msal_scope,
+                                                                   prompt_callback=prompt_callback)
+        return cred, auth_profile
 
-    def login_with_username_password(self):
-        # UsernamePasswordCredential
-        pass
+    def login_with_username_password(self, username, password, tenant):
+        from azure.identity import AuthenticationRequiredError, UsernamePasswordCredential, AuthProfile
+        if tenant:
+            credential, auth_profile = UsernamePasswordCredential.authenticate(_CLIENT_ID, username, password,
+                                                                               tenant_id=tenant)
+        else:
+            credential, auth_profile = UsernamePasswordCredential.authenticate(_CLIENT_ID, username, password)
+        return credential, auth_profile
 
     def login_with_service_principal_secret(self, client_id, client_secret, tenant):
         # ClientSecretCredential
