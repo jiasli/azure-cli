@@ -1842,7 +1842,7 @@ class TestProfile(unittest.TestCase):
         mgmt_resource = 'https://management.core.windows.net/'
         token_cache = adal.TokenCache()
         finder = SubscriptionFinder(cli, lambda _, _1, _2: mock_auth_context, token_cache, lambda _: mock_arm_client)
-        all_subscriptions = finder._find_using_common_tenant(access_token="token1", resource=mgmt_resource)
+        all_subscriptions = finder.find_using_common_tenant(access_token="token1", resource=mgmt_resource)
 
         self.assertEqual(len(all_subscriptions), 1)
         self.assertEqual(all_subscriptions[0].tenant_id, self.tenant_id)
@@ -1879,8 +1879,8 @@ class TestProfile(unittest.TestCase):
         mock_auth_context.acquire_token.side_effect = [self.token_entry1, adal_error_mfa]
 
         # action
-        all_subscriptions = finder._find_using_common_tenant(access_token="token1",
-                                                             resource='https://management.core.windows.net/')
+        all_subscriptions = finder.find_using_common_tenant(access_token="token1",
+                                                            resource='https://management.core.windows.net/')
 
         # assert
         # subscriptions are correctly returned
@@ -1905,7 +1905,7 @@ class TestProfile(unittest.TestCase):
 
         token_cache = adal.TokenCache()
         finder = SubscriptionFinder(cli, lambda _, _1, _2: mock_auth_context, token_cache, lambda _: mock_arm_client)
-        all_subscriptions = finder._find_using_specific_tenant(tenant=token_tenant, access_token="token1")
+        all_subscriptions = finder.find_using_specific_tenant(tenant=token_tenant, access_token="token1")
 
         self.assertEqual(len(all_subscriptions), 1)
         self.assertEqual(all_subscriptions[0].tenant_id, token_tenant)
