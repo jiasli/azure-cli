@@ -80,7 +80,6 @@ _ASSIGNED_IDENTITY_INFO = 'assignedIdentityInfo'
 
 _AZ_LOGIN_MESSAGE = "Please run 'az login' to setup account."
 
-_PROFILE_PATH = 'D:\\cli\\profile.json'
 
 def load_subscriptions(cli_ctx, all_clouds=False, refresh=False):
     profile = Profile(cli_ctx=cli_ctx)
@@ -175,19 +174,23 @@ class Profile(object):
         self._ad = self.cli_ctx.cloud.endpoints.active_directory
         self._msi_creds = None
 
-    def find_subscriptions_on_login(self,
-                                    interactive,
-                                    username,
-                                    password,
-                                    is_service_principal,
-                                    tenant,
-                                    use_device_code=False,
-                                    allow_no_subscriptions=False,
-                                    subscription_finder=None,
-                                    use_cert_sn_issuer=None):
+    def login(self,
+              interactive,
+              username,
+              password,
+              is_service_principal,
+              tenant,
+              use_device_code=False,
+              allow_no_subscriptions=False,
+              subscription_finder=None,
+              use_cert_sn_issuer=None,
+              find_subscriptions=True):
+        # TODO: allow disabling SSL verification in MSAL
         from azure.cli.core._debug import allow_debug_adal_connection
         allow_debug_adal_connection()
-        subscriptions = []
+
+        credential=None
+        auth_profile=None
 
         if not subscription_finder:
             subscription_finder = SubscriptionFinder(self.cli_ctx,
@@ -202,57 +205,54 @@ class Profile(object):
                 from azure.identity import CredentialUnavailableError
                 try:
                     authority_url, _ = _get_authority_url(self.cli_ctx, tenant)
-                    # Write the MSAL token cache
                     credential, auth_profile = self.login_with_authorization_code(tenant)
-                    subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
-                    # subscriptions = subscription_finder.find_through_authorization_code_flow(
-                    #     tenant, self._ad_resource_uri, authority_url)
                 except CredentialUnavailableError:
                     use_device_code = True
                     logger.warning('Not able to launch a browser to log you in, falling back to device code...')
 
             if use_device_code:
                 credential, auth_profile = self.login_with_device_code(tenant)
-                subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
         else:
             if is_service_principal:
                 if not tenant:
                     raise CLIError('Please supply tenant using "--tenant"')
                 sp_auth = ServicePrincipalAuth(password, use_cert_sn_issuer)
                 credential = self.login_with_service_principal_secret(username, password, tenant)
-                subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
-                # subscriptions = subscription_finder.find_from_service_principal_id(
-                #     username, sp_auth, tenant, self._ad_resource_uri)
-
             else:
                 credential, auth_profile = self.login_with_username_password(username, password, tenant)
-                if tenant:
-                    subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
+
+        # List tenants and find subscriptions by calling ARM
+        subscriptions = []
+        if find_subscriptions:
+            if tenant and credential:
+                subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
+            elif credential and auth_profile:
+                subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
+            if not allow_no_subscriptions and not subscriptions:
+                if username:
+                    msg = "No subscriptions found for {}.".format(username)
                 else:
-                    subscriptions = subscription_finder.find_using_common_tenant(auth_profile, credential)
+                    # Don't show username if bare 'az login' is used
+                    msg = "No subscriptions found."
+                raise CLIError(msg)
 
-        if not allow_no_subscriptions and not subscriptions:
-            if username:
-                msg = "No subscriptions found for {}.".format(username)
-            else:
-                # Don't show username if bare 'az login' is used
-                msg = "No subscriptions found."
-            raise CLIError(msg)
+            if is_service_principal:
+                self._creds_cache.save_service_principal_cred(sp_auth.get_entry_to_persist(username,
+                                                                                           tenant))
+            if self._creds_cache.adal_token_cache.has_state_changed:
+                self._creds_cache.persist_cached_creds()
 
-        if is_service_principal:
-            self._creds_cache.save_service_principal_cred(sp_auth.get_entry_to_persist(username,
-                                                                                       tenant))
-        if self._creds_cache.adal_token_cache.has_state_changed:
-            self._creds_cache.persist_cached_creds()
-
-        if allow_no_subscriptions:
-            t_list = [s.tenant_id for s in subscriptions]
-            bare_tenants = [t for t in subscription_finder.tenants if t not in t_list]
-            profile = Profile(cli_ctx=self.cli_ctx)
-            tenant_accounts = profile._build_tenant_level_accounts(bare_tenants)  # pylint: disable=protected-access
-            subscriptions.extend(tenant_accounts)
-            if not subscriptions:
-                return []
+            if allow_no_subscriptions:
+                t_list = [s.tenant_id for s in subscriptions]
+                bare_tenants = [t for t in subscription_finder.tenants if t not in t_list]
+                profile = Profile(cli_ctx=self.cli_ctx)
+                tenant_accounts = profile._build_tenant_level_accounts(bare_tenants)  # pylint: disable=protected-access
+                subscriptions.extend(tenant_accounts)
+                if not subscriptions:
+                    return []
+        else:
+            bare_tenant = tenant or auth_profile.tenant_id
+            subscriptions = self._build_tenant_level_accounts([bare_tenant])
 
         consolidated = self._normalize_properties(auth_profile.username, subscriptions,
                                                   is_service_principal, bool(use_cert_sn_issuer),
@@ -278,24 +278,7 @@ class Profile(object):
                 silent_auth_only=True,
                 scope=self._msal_scope
             )
-            auth_profile.tenant_id = 'organizations'
-        # serialize the profile to JSON, including all keyword arguments
-        profile_json = auth_profile.serialize()
-        with open(_PROFILE_PATH, 'w') as f:
-            f.write(profile_json)
-
         return credential, auth_profile
-        # token_entry = credential.get_token('https://management.azure.com/.default')
-        # self.user_id = auth_profile.username
-        # self.msal_credential = credential
-        # self._auth_profile = auth_profile
-        # # self.user_id = token_entry[_TOKEN_ENTRY_USER_ID]
-        # logger.warning("You have logged in. Now let us find all the subscriptions to which you have access...")
-        # if tenant is None:
-        #     result = self._find_using_common_tenant(token_entry.token, resource)
-        # else:
-        #     result = self._find_using_specific_tenant(tenant, token_entry.token)
-        # return result
 
     def login_with_device_code(self, tenant):
         from azure.identity import AuthenticationRequiredError, DeviceCodeCredential
