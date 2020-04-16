@@ -148,7 +148,6 @@ def _get_cloud_console_token_endpoint():
 
 # pylint: disable=too-many-lines,too-many-instance-attributes
 class Profile(object):
-    # Similar to AuthProfile
     _global_creds_cache = None
 
     def __init__(self, storage=None, auth_ctx_factory=None, use_global_creds_cache=True,
@@ -204,8 +203,7 @@ class Profile(object):
             if not use_device_code:
                 from azure.identity import CredentialUnavailableError
                 try:
-                    authority_url, _ = _get_authority_url(self.cli_ctx, tenant)
-                    credential, auth_profile = self.login_with_authorization_code(tenant)
+                    credential, auth_profile = self.login_with_interactive_browser(tenant)
                 except CredentialUnavailableError:
                     use_device_code = True
                     logger.warning('Not able to launch a browser to log you in, falling back to device code...')
@@ -262,7 +260,7 @@ class Profile(object):
         # use deepcopy as we don't want to persist these changes to file.
         return deepcopy(consolidated)
 
-    def login_with_authorization_code(self, tenant):
+    def login_with_interactive_browser(self, tenant):
         # InteractiveBrowserCredential
         from azure.identity import AuthenticationRequiredError, InteractiveBrowserCredential
         if tenant:
@@ -286,12 +284,12 @@ class Profile(object):
         prompt_callback=lambda verification_uri, user_code, expires_on: \
             logger.warning(message.format(verification_uri, user_code))
         if tenant:
-            cred, auth_profile = DeviceCodeCredential.authenticate(_CLIENT_ID,
+            cred, auth_profile = DeviceCodeCredential.authenticate(client_id=_CLIENT_ID,
                                                                    scope=self._msal_scope,
                                                                    tenant_id=tenant,
                                                                    prompt_callback=prompt_callback)
         else:
-            cred, auth_profile = DeviceCodeCredential.authenticate(_CLIENT_ID,
+            cred, auth_profile = DeviceCodeCredential.authenticate(client_id=_CLIENT_ID,
                                                                    scope=self._msal_scope,
                                                                    prompt_callback=prompt_callback)
         return cred, auth_profile
@@ -300,9 +298,11 @@ class Profile(object):
         from azure.identity import AuthenticationRequiredError, UsernamePasswordCredential, AuthProfile
         if tenant:
             credential, auth_profile = UsernamePasswordCredential.authenticate(_CLIENT_ID, username, password,
-                                                                               tenant_id=tenant)
+                                                                               tenant_id=tenant,
+                                                                               scope=self._msal_scope)
         else:
-            credential, auth_profile = UsernamePasswordCredential.authenticate(_CLIENT_ID, username, password)
+            credential, auth_profile = UsernamePasswordCredential.authenticate(_CLIENT_ID, username, password,
+                                                                               scope=self._msal_scope)
         return credential, auth_profile
 
     def login_with_service_principal_secret(self, client_id, client_secret, tenant):
