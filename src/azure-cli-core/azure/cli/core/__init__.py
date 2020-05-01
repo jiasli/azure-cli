@@ -248,7 +248,7 @@ class MainCommandsLoader(CLICommandsLoader):
                          "(note: there's always an overhead with the first module loaded)",
                          cumulative_elapsed_time)
 
-        def _update_command_table_from_extensions(ext_suppressions, extension_names):
+        def _update_command_table_from_extensions(ext_suppressions, extension_names=None):
 
             from azure.cli.core.extension.operations import check_version_compatibility
 
@@ -394,7 +394,7 @@ class MainCommandsLoader(CLICommandsLoader):
             ext_suppressions = _get_extension_suppressions(self.loaders)
             # We always load extensions even if the appropriate module has been loaded
             # as an extension could override the commands already loaded.
-            _update_command_table_from_extensions(ext_suppressions, index_extensions)
+            _update_command_table_from_extensions(ext_suppressions)
 
             _update_index()
 
