@@ -68,7 +68,7 @@ class AzCli(CLI):
         ACCOUNT.load(os.path.join(azure_folder, 'azureProfile.json'))
         CONFIG.load(os.path.join(azure_folder, 'az.json'))
         SESSION.load(os.path.join(azure_folder, 'az.sess'), max_age=3600)
-        INDEX.load(os.path.join(azure_folder, 'index.json'))
+        INDEX.load(os.path.join(azure_folder, 'commandIndex.json'))
 
         self.cloud = get_active_cloud(self)
         logger.debug('Current cloud config:\n%s', str(self.cloud.name))
