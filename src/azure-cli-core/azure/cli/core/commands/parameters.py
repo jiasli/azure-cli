@@ -114,6 +114,20 @@ def get_resource_groups(cli_ctx):
     return list(rcf.resource_groups.list())
 
 
+def get_json_query_type(query='id'):
+    def json_query_type(string):
+        import collections
+        import json
+        import jmespath
+        from jmespath.exceptions import JMESPathError
+        try:
+            result = jmespath.search(query, json.loads(string), jmespath.Options(collections.OrderedDict))
+            return result
+        except (json.JSONDecodeError, JMESPathError):
+            return string
+    return json_query_type
+
+
 @Completer
 def get_resource_group_completion_list(cmd, prefix, namespace, **kwargs):  # pylint: disable=unused-argument
     result = get_resource_groups(cmd.cli_ctx)

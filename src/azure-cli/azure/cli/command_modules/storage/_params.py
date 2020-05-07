@@ -6,7 +6,7 @@
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
 from azure.cli.core.commands.parameters import (tags_type, file_type, get_location_type, get_enum_type,
-                                                get_three_state_flag)
+                                                get_three_state_flag, get_json_query_type)
 
 from ._validators import (get_datetime_type, validate_metadata, get_permission_validator, get_permission_help_string,
                           resource_type_type, services_type, validate_entity, validate_select, validate_blob_type,
@@ -329,7 +329,7 @@ def load_arguments(self, _):  # pylint: disable=too-many-locals, too-many-statem
         from ._validators import validate_subnet
         c.argument('account_name', acct_name_type, id_part=None)
         c.argument('ip_address', help='IPv4 address or CIDR range.')
-        c.argument('subnet', help='Name or ID of subnet. If name is supplied, `--vnet-name` must be supplied.')
+        c.argument('subnet', type=get_json_query_type(), help='Name or ID of subnet. If name is supplied, `--vnet-name` must be supplied.')
         c.argument('vnet_name', help='Name of a virtual network.', validator=validate_subnet)
         c.argument('action', help='The action of virtual network rule.')
 
