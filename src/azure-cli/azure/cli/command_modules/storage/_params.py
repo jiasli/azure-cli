@@ -329,7 +329,8 @@ def load_arguments(self, _):  # pylint: disable=too-many-locals, too-many-statem
         from ._validators import validate_subnet
         c.argument('account_name', acct_name_type, id_part=None)
         c.argument('ip_address', help='IPv4 address or CIDR range.')
-        c.argument('subnet', type=get_json_query_type(), help='Name or ID of subnet. If name is supplied, `--vnet-name` must be supplied.')
+        c.argument('subnet', type=get_json_query_type(),
+                   help='Name or ID of subnet. If name is supplied, `--vnet-name` must be supplied.')
         c.argument('vnet_name', help='Name of a virtual network.', validator=validate_subnet)
         c.argument('action', help='The action of virtual network rule.')
 
