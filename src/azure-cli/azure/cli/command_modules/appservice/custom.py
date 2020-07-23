@@ -1863,8 +1863,6 @@ def list_publishing_credentials(cmd, resource_group_name, name, slot=None):
 
 
 def list_publish_profiles(cmd, resource_group_name, name, slot=None):
-    import xmltodict
-
     content = _generic_site_operation(cmd.cli_ctx, resource_group_name, name,
                                       'list_publishing_profile_xml_with_secrets', slot)
     full_xml = ''
