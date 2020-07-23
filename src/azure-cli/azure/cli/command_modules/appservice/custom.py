@@ -1872,6 +1872,8 @@ def list_publish_profiles(cmd, resource_group_name, name, slot=None):
         full_xml += f.decode()
 
     # Override the --output option provided by the user
+    # This affects how Knack retrieves the output formatter later:
+    # https://github.com/microsoft/knack/blob/0d0308bc567f2d25654bb39201c02ab262d7ce0a/knack/cli.py#L218
     cmd.cli_ctx.invocation.data['output'] = 'tsv'
     return full_xml
 
