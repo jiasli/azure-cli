@@ -1871,16 +1871,9 @@ def list_publish_profiles(cmd, resource_group_name, name, slot=None):
     for f in content:
         full_xml += f.decode()
 
-    profiles = xmltodict.parse(full_xml, xml_attribs=True)['publishData']['publishProfile']
-    converted = []
-    for profile in profiles:
-        new = {}
-        for key in profile:
-            # strip the leading '@' xmltodict put in for attributes
-            new[key.lstrip('@')] = profile[key]
-        converted.append(new)
-
-    return converted
+    # Override the --output option provided by the user
+    cmd.cli_ctx.invocation.data['output'] = 'tsv'
+    return full_xml
 
 
 def enable_cd(cmd, resource_group_name, name, enable, slot=None):
