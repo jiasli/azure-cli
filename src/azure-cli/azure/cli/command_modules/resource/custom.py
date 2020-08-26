@@ -1148,6 +1148,21 @@ def create_resource_group(cmd, rg_name, location, tags=None, managed_by=None):
     return rcf.resource_groups.create_or_update(rg_name, parameters)
 
 
+def get_resource_group(cmd, rg_name, access_token):
+    from unittest import mock
+    # patch get_login_credentials so that the client created by
+    # azure.cli.core.commands.client_factory.get_mgmt_service_client uses our own credential
+    with mock.patch("azure.cli.core._profile.Profile.get_login_credentials") as mock_get_login_credentials:
+        # We use BasicTokenAuthentication to replace azure.cli.core.adal_authentication.AdalAuthentication
+        from msrest.authentication import BasicTokenAuthentication
+        cred = BasicTokenAuthentication({"access_token": access_token})
+        # Return a tuple of (credential, subscription_id, tenant_id(unused))
+        mock_get_login_credentials.return_value = cred, cmd.cli_ctx.data['subscription_id'], None
+        client = _resource_client_factory(cmd.cli_ctx)
+
+    return client.resource_groups.get(rg_name)
+
+
 def update_resource_group(instance, tags=None):
 
     if tags is not None:

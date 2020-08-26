@@ -436,6 +436,10 @@ def load_arguments(self, _):
                        name='resource_group_name', actions=[LocalContextAction.SET], scopes=[ALL]))
         c.argument('managed_by', min_api='2016-09-01', help='The ID of the resource that manages this resource group.')
 
+    with self.argument_context('group show') as c:
+        c.argument('rg_name', options_list=['--name', '--resource-group', '-n', '-g'],
+                   help='name of the resource group', completer=None)
+
     with self.argument_context('group delete') as c:
         c.argument('resource_group_name', resource_group_name_type,
                    options_list=['--name', '-n', '--resource-group', '-g'], local_context_attribute=None)
