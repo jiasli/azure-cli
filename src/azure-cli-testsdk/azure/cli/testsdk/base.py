@@ -162,8 +162,9 @@ class ScenarioTest(ReplayableTest, CheckerMixin, unittest.TestCase):
 
         return uuid.UUID(moniker)
 
-    def cmd(self, command, checks=None, expect_failure=False):
-        command = self._apply_kwargs(command)
+    def cmd(self, command, checks=None, expect_failure=False, apply_kwargs=True):
+        if apply_kwargs:
+            command = self._apply_kwargs(command)
         return execute(self.cli_ctx, command, expect_failure=expect_failure).assert_with_checks(checks)
 
     def get_subscription_id(self):
