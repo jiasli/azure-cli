@@ -1216,6 +1216,7 @@ class TestProfile(unittest.TestCase):
                         'access_token': TestProfile.test_msi_access_token
                     }
                 else:
+                    print(AzureResponseError.__module__)
                     raise AzureResponseError('Failed to connect to MSI. Please make sure MSI is configured correctly.\n'
                                              'Get Token request returned http error: 400, reason: Bad Request')
 
