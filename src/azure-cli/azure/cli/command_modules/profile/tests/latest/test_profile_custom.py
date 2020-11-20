@@ -124,23 +124,22 @@ class ProfileCommandTest(unittest.TestCase):
         # assert
         self.assertTrue(invoked)
 
-    @mock.patch('azure.cli.core._profile.SubscriptionFinder', autospec=True)
-    def test_login_invalid_url(self, mock_subscription_finder):
+    @mock.patch('azure.cli.core._profile.Profile.find_subscriptions_on_login', autospec=True)
+    def test_login_error_handling(self, find_subscriptions_on_login_mock):
         from requests.exceptions import InvalidURL
         from azure.cli.core.azclierror import UnclassifiedUserFault
 
-        class SubscriptionFinderStub:
-            def find_through_authorization_code_flow(self, tenant, resource, authority_url):
-                raise InvalidURL(request='http://some.unknown.endpoints')
-
-            def find_through_interactive_flow(self, tenant, resource):
-                raise InvalidURL(request='http://some.unknown.endpoints')
-        mock_subscription_finder.return_value = SubscriptionFinderStub()
-
         cmd = mock.MagicMock()
         cmd.cli_ctx = DummyCli()
-        with self.assertRaisesRegexp(UnclassifiedUserFault, 'Invalid url'):
-            login(cmd)
+        profile = mock.MagicMock()
+
+        find_subscriptions_on_login_mock.side_effect = InvalidURL(request='http://some.unknown.endpoints')
+        with self.assertRaisesRegexp(UnclassifiedUserFault, 'Invalid Active Directory URL.'):
+            login(cmd, use_device_code=True)
+
+        find_subscriptions_on_login_mock.side_effect = InvalidURL(request='http://some.unknown.endpoints')
+        with self.assertRaisesRegexp(UnclassifiedUserFault, 'Invalid Active Directory URL.'):
+            login(cmd, use_device_code=True)
 
     def test_login_validate_tenant(self):
         from azure.cli.command_modules.profile._validators import validate_tenant

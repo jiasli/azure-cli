@@ -183,9 +183,9 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         from azure.cli.core.azclierror import UnclassifiedUserFault
         raise UnclassifiedUserFault(error_msg='Connection failure. Error detail: ' + str(err),
                                     recommendation='Please ensure you have network connection.')
-    except requests.exceptions.InvalidURL:
+    except requests.exceptions.InvalidURL as err:
         from azure.cli.core.azclierror import UnclassifiedUserFault
-        raise UnclassifiedUserFault(error_msg='Invalid URL.',
+        raise UnclassifiedUserFault(error_msg='Invalid Active Directory URL. Error detail: ' + str(err),
                                     recommendation='Please make sure the cloud is registered with a valid Active Directory URL.')
     all_subscriptions = list(subscriptions)
     for sub in all_subscriptions:
