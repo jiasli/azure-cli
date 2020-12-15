@@ -1206,3 +1206,38 @@ def scopes_to_resource(scopes):
         scope = scope[:-len("/.default")]
 
     return scope
+
+
+def _get_parent_proc_name():
+    # Un-cached function to get parent process name.
+    try:
+        import psutil
+    except ImportError:
+        return None
+
+    import os
+    parent = psutil.Process(os.getpid()).parent()
+
+    if parent and parent.name().lower().startswith('python'):
+        # On Windows, CLI is run inside a virtual environment which launches another python
+        parent = parent.parent()
+
+    if parent:
+        #  powershell.exe launches cmd.exe to launch the cli.
+        grandparent = parent.parent()
+        if grandparent:
+            grandparent_name = grandparent.name().lower()
+            if grandparent_name.startswith("powershell") or grandparent_name.startswith("pwsh"):
+                return grandparent.name()
+        # if powershell is not the grandparent, simply return the parent's name.
+        return parent.name()
+    return None
+
+
+def get_parent_proc_name():
+    # This function wraps _get_parent_proc_name, as psutil calls are time-consuming, so use a
+    # function-level cache to save the result.
+    if not hasattr(get_parent_proc_name, "return_value"):
+        parent_proc_name = _get_parent_proc_name()
+        setattr(get_parent_proc_name, "return_value", parent_proc_name)
+    return getattr(get_parent_proc_name, "return_value")
