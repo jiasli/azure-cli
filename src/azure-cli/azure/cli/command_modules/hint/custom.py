@@ -7,13 +7,42 @@ from azure.cli.core.style import print_styled_text, Style
 from azure.cli.core.decorators import suppress_all_exceptions
 
 
+def _get_default_account_text(accounts):
+    """Return the type (tenant or subscription) and display text for the default account.
+
+      - For tenant account, only show the tenant ID.
+      - For subscription account, if name can uniquely identify the account, only show the name;
+        Otherwise, show both name and ID."""
+    account = next(s for s in accounts if s['isDefault'] is True)
+    account_name = account['name']
+    account_id = account['id']
+
+    # Tenant account
+    from azure.cli.core._profile import _TENANT_LEVEL_ACCOUNT_NAME
+    if account_name == _TENANT_LEVEL_ACCOUNT_NAME:
+        return "tenant", account_id
+
+    # Subscription account
+    # Check if name can uniquely identity the subscription
+    accounts_with_name = [a for a in accounts if a['name'] == account_name]
+    if len(accounts_with_name) == 1:
+        # For unique name, only show the name
+        account_text = account_name
+    else:
+        # If more than 1 accounts have the same name, also show ID
+        account_text = '{} ({})'.format(account_name, account_id)
+
+    return 'subscription', account_text
+
+
 @suppress_all_exceptions()
 def login_hinter(cli_ctx, result):  # pylint: disable=unused-argument
-    selected_account = next(s for s in result if s['isDefault'] is True)
+    account_type, account_text = _get_default_account_text(result)
+
     command_placeholder = '{:43s}'
     selected_sub = [
-        (Style.PRIMARY, 'Your default subscription is '),
-        (Style.IMPORTANT, '{} {}'.format(selected_account['name'], selected_account['id'])),
+        (Style.PRIMARY, 'Your default {} is '.format(account_type)),
+        (Style.IMPORTANT, account_text),
     ]
     print_styled_text(selected_sub)
     print_styled_text()
