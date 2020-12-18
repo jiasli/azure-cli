@@ -12,7 +12,8 @@ def _get_default_account_text(accounts):
 
       - For tenant account, only show the tenant ID.
       - For subscription account, if name can uniquely identify the account, only show the name;
-        Otherwise, show both name and ID."""
+        Otherwise, show both name and ID.
+    """
     account = next(s for s in accounts if s['isDefault'] is True)
     account_name = account['name']
     account_id = account['id']
