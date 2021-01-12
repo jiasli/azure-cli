@@ -14,6 +14,7 @@ https://devdivdesignguide.azurewebsites.net/command-line-interface/color-guideli
 For a complete demo, see `src/azure-cli/azure/cli/command_modules/util/custom.py` and run `az demo style`.
 """
 
+import os
 import sys
 from enum import Enum
 
@@ -32,10 +33,14 @@ class Style(str, Enum):
     WARNING = "warning"
 
 
-THEME = {
+# Theme that doesn't contain any style
+THEME_NONE = {}
+
+# Theme to be used on a dark-themed terminal
+THEME_DARK = {
     # Style to ANSI escape sequence mapping
     # https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-    Style.PRIMARY: Fore.LIGHTWHITE_EX,
+    Style.PRIMARY: Fore.RESET,
     Style.SECONDARY: Fore.LIGHTBLACK_EX,  # may use WHITE, but will lose contrast to LIGHTWHITE_EX
     Style.IMPORTANT: Fore.LIGHTMAGENTA_EX,
     Style.ACTION: Fore.LIGHTBLUE_EX,
@@ -46,22 +51,44 @@ THEME = {
     Style.WARNING: Fore.LIGHTYELLOW_EX,
 }
 
+# Theme to be used on a light-themed terminal
+THEME_LIGHT = {
+    Style.PRIMARY: Fore.RESET,
+    Style.SECONDARY: Fore.LIGHTBLACK_EX,
+    Style.IMPORTANT: Fore.MAGENTA,
+    Style.ACTION: Fore.BLUE,
+    Style.HYPERLINK: Fore.CYAN,
+    Style.ERROR: Fore.RED,
+    Style.SUCCESS: Fore.GREEN,
+    Style.WARNING: Fore.YELLOW,
+}
+
+
+class Theme(str, Enum):
+    DARK = 'dark'
+    LIGHT = 'light'
+    NONE = 'none'
+
+
+THEME_DEFINITIONS = {
+    Theme.NONE: THEME_NONE,
+    Theme.DARK: THEME_DARK,
+    Theme.LIGHT: THEME_LIGHT
+}
 
 # Blue and bright blue is not visible under the default theme of powershell.exe
 POWERSHELL_COLOR_REPLACEMENT = {
-    Fore.BLUE: Fore.LIGHTWHITE_EX,
-    Fore.LIGHTBLUE_EX: Fore.LIGHTWHITE_EX
+    Fore.BLUE: Fore.RESET,
+    Fore.LIGHTBLUE_EX: Fore.RESET
 }
 
 
 def print_styled_text(*styled_text_objects, file=None, **kwargs):
     """
-    Print styled text.
+    Print styled text. This function wraps the built-in function `print`, additional arguments can be sent
+    via keyword arguments.
 
-    :param styled_text_objects: The input text objects. Each object can be in these formats:
-        - text
-        - (style, text)
-        - [(style, text), ...]
+    :param styled_text_objects: The input text objects. See format_styled_text for formats of each object.
     :param file: The file to print the styled text. The default target is sys.stderr.
     """
     formatted_list = [format_styled_text(obj) for obj in styled_text_objects]
@@ -69,21 +96,35 @@ def print_styled_text(*styled_text_objects, file=None, **kwargs):
     print(*formatted_list, file=file or sys.stderr, **kwargs)
 
 
-def format_styled_text(styled_text, enable_color=None):
-    """Format styled text.
-    Color is turned on by default. To turn off color for all invocations of this function, set
-    `format_styled_text.enable_color = False`. To turn off color only for one invocation, set parameter
-    `enable_color=False`.
+def format_styled_text(styled_text, theme=None):
+    """Format styled text. Dark theme used by default. Available themes are 'dark', 'light', 'none'.
 
-    :param styled_text: See print_styled_text for detail.
-    :param enable_color: Whether color should be enabled. If not provided, the function attribute `enable_color`
-     will be honored.
+    To change theme for all invocations of this function, set `format_styled_text.theme`.
+    To change theme for one invocation, set parameter `theme`.
+
+    :param styled_text: Can be in these formats:
+        - text
+        - (style, text)
+        - [(style, text), ...]
+    :param theme: The theme used to format text. Can be theme name str, `Theme` Enum or dict.
     """
-    if enable_color is None:
-        enable_color = getattr(format_styled_text, "enable_color", True)
+    if theme is None:
+        theme = getattr(format_styled_text, "theme", THEME_DARK)
 
-    from azure.cli.core.util import get_parent_proc_name
-    is_powershell = get_parent_proc_name() == "powershell.exe"
+    # Convert str to the theme dict
+    if isinstance(theme, str):
+        try:
+            theme = THEME_DEFINITIONS[theme]
+        except KeyError:
+            from azure.cli.core.azclierror import CLIInternalError
+            raise CLIInternalError("Invalid theme. Supported themes: none, dark, light")
+
+    # Cache the value of is_legacy_powershell
+    if not hasattr(format_styled_text, "_is_legacy_powershell"):
+        from azure.cli.core.util import get_parent_proc_name
+        is_legacy_powershell = not is_modern_terminal() and get_parent_proc_name() == "powershell.exe"
+        setattr(format_styled_text, "_is_legacy_powershell", is_legacy_powershell)
+    is_legacy_powershell = getattr(format_styled_text, "_is_legacy_powershell")
 
     # https://python-prompt-toolkit.readthedocs.io/en/stable/pages/printing_text.html#style-text-tuples
     formatted_parts = []
@@ -102,23 +143,46 @@ def format_styled_text(styled_text, enable_color=None):
             from azure.cli.core.azclierror import CLIInternalError
             raise CLIInternalError("Invalid styled text. It should be a list of 2-element tuples.")
 
-        style = text[0]
-        # Check if the specified style is defined
-        if style not in THEME:
-            from azure.cli.core.azclierror import CLIInternalError
-            raise CLIInternalError("Invalid style. Only use pre-defined style in Style enum.")
+        style, raw_text = text
 
-        escape_seq = THEME[text[0]]
-        # Replace blue in powershell.exe
-        if is_powershell and escape_seq in POWERSHELL_COLOR_REPLACEMENT:
-            escape_seq = POWERSHELL_COLOR_REPLACEMENT[escape_seq]
-
-        if enable_color:
-            formatted_parts.append(escape_seq + text[1])
+        if theme is THEME_NONE:
+            formatted_parts.append(raw_text)
         else:
-            formatted_parts.append(text[1])
+            try:
+                escape_seq = theme[style]
+            except KeyError:
+                from azure.cli.core.azclierror import CLIInternalError
+                raise CLIInternalError("Invalid style. Only use pre-defined style in Style enum.")
+            # Replace blue in powershell.exe
+            if is_legacy_powershell and escape_seq in POWERSHELL_COLOR_REPLACEMENT:
+                escape_seq = POWERSHELL_COLOR_REPLACEMENT[escape_seq]
+            formatted_parts.append(escape_seq + raw_text)
 
     # Reset control sequence
-    if enable_color:
+    if theme is not THEME_NONE:
         formatted_parts.append(Fore.RESET)
     return ''.join(formatted_parts)
+
+
+def _is_modern_terminal():
+    # Windows Terminal: https://github.com/microsoft/terminal/issues/1040
+    if 'WT_SESSION' in os.environ:
+        return True
+    # VS Code: https://github.com/microsoft/vscode/pull/30346
+    if os.environ.get('TERM_PROGRAM', '').lower() == 'vscode':
+        return True
+    return False
+
+
+def is_modern_terminal():
+    """Detect whether the current terminal is a modern terminal that supports Unicode and
+    Console Virtual Terminal Sequences.
+
+    Currently, these terminals can be detected:
+      - Windows Terminal
+      - VS Code terminal
+    """
+    # This function wraps _is_modern_terminal and use a function-level cache to save the result.
+    if not hasattr(is_modern_terminal, "return_value"):
+        setattr(is_modern_terminal, "return_value", _is_modern_terminal())
+    return getattr(is_modern_terminal, "return_value")
