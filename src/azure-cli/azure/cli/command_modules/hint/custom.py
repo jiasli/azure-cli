@@ -40,7 +40,7 @@ def _get_default_account_text(accounts):
 def login_hinter(cli_ctx, result):  # pylint: disable=unused-argument
     account_type, account_text = _get_default_account_text(result)
 
-    command_placeholder = '{:43s}'
+    command_placeholder = '{:44s}'
     selected_sub = [
         (Style.PRIMARY, 'Your default {} is '.format(account_type)),
         (Style.IMPORTANT, account_text),
