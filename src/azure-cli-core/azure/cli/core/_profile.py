@@ -157,7 +157,7 @@ class Profile:
               allow_no_subscriptions=False,
               subscription_finder=None,
               use_cert_sn_issuer=None,
-              find_subscriptions=True):
+              access_level=None):
 
         scopes = self._prepare_authenticate_scopes(scopes)
 
@@ -200,8 +200,24 @@ class Profile:
             else:
                 credential, auth_record = identity.login_with_username_password(username, password, scopes=scopes)
 
-        # List tenants and find subscriptions by calling ARM
-        if find_subscriptions:
+        accounts = []
+
+        # Build a tenant stub account
+        if access_level == "auth":
+            tenant_id = tenant or auth_record.tenant_id
+            accounts = self._build_tenant_stub([tenant_id])
+
+        # List tenants by calling ARM
+        elif access_level == 'tenant':
+            tenants = subscription_finder.list_tenants(credential)
+            if tenant:
+                tenants = [t for t in tenants if t.tenant_id == tenant]
+            profile = Profile(cli_ctx=self.cli_ctx)
+            tenant_accounts = profile._build_tenant_account(tenants)
+            accounts.extend(tenant_accounts)
+
+        # List tenants and list subscriptions by calling ARM
+        elif access_level == 'subscription':
             if tenant:
                 subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
             else:
@@ -219,19 +235,15 @@ class Profile:
                 t_list = [s.tenant_id for s in subscriptions]
                 bare_tenants = [t for t in subscription_finder.tenants if t not in t_list]
                 profile = Profile(cli_ctx=self.cli_ctx)
-                tenant_accounts = profile._build_tenant_level_accounts(bare_tenants)  # pylint: disable=protected-access
+                tenant_accounts = profile._build_tenant_stub(bare_tenants)  # pylint: disable=protected-access
                 subscriptions.extend(tenant_accounts)
-                if not subscriptions:
-                    return []
-        else:
-            # Build a tenant account
-            bare_tenant = tenant or auth_record.tenant_id
-            subscriptions = self._build_tenant_level_accounts([bare_tenant])
+
+            accounts.extend(subscriptions)
 
         if auth_record:
             username = auth_record.username
 
-        consolidated = self._normalize_properties(username, subscriptions,
+        consolidated = self._normalize_properties(username, accounts,
                                                   is_service_principal, bool(use_cert_sn_issuer))
 
         self._set_subscriptions(consolidated)
@@ -260,12 +272,12 @@ class Profile:
             subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
             if not subscriptions:
                 if allow_no_subscriptions:
-                    subscriptions = self._build_tenant_level_accounts([tenant])
+                    subscriptions = self._build_tenant_stub([tenant])
                 else:
                     raise CLIError('No access was configured for the VM, hence no subscriptions were found. '
                                    "If this is expected, use '--allow-no-subscriptions' to have tenant level access.")
         else:
-            subscriptions = self._build_tenant_level_accounts([tenant])
+            subscriptions = self._build_tenant_stub([tenant])
 
         # Get info for persistence
         user_name = mi_info[Identity.MANAGED_IDENTITY_TYPE]
@@ -307,12 +319,12 @@ class Profile:
             subscriptions = subscription_finder.find_using_specific_tenant(tenant, credential)
             if not subscriptions:
                 if allow_no_subscriptions:
-                    subscriptions = self._build_tenant_level_accounts([tenant])
+                    subscriptions = self._build_tenant_stub([tenant])
                 else:
                     raise CLIError('No access was configured for the VM, hence no subscriptions were found. '
                                    "If this is expected, use '--allow-no-subscriptions' to have tenant level access.")
         else:
-            subscriptions = self._build_tenant_level_accounts([tenant])
+            subscriptions = self._build_tenant_stub([tenant])
 
         consolidated = self._normalize_properties(identity_info[Identity.CLOUD_SHELL_IDENTITY_UNIQUE_NAME],
                                                   subscriptions, is_service_principal=False)
@@ -350,7 +362,7 @@ class Profile:
                 subscriptions = subscription_finder.find_using_common_tenant(username, credential)
         else:
             # Use home tenant ID if tenant_id is not given
-            subscriptions = self._build_tenant_level_accounts([tenant_id or authentication_record.tenant_id])
+            subscriptions = self._build_tenant_stub([tenant_id or authentication_record.tenant_id])
 
         consolidated = self._normalize_properties(username or client_id, subscriptions,
                                                   is_service_principal=(user_type == _SERVICE_PRINCIPAL),
@@ -373,6 +385,7 @@ class Profile:
 
             subscription_dict = {
                 _SUBSCRIPTION_ID: s.id.rpartition('/')[2],
+                "resourceId": s.id,
                 _SUBSCRIPTION_NAME: display_name,
                 _STATE: s.state,
                 _USER_ENTITY: {
@@ -389,7 +402,7 @@ class Profile:
                 subscription_dict[_USER_ENTITY][_IS_ENVIRONMENT_CREDENTIAL] = True
 
             # For subscription account from Subscriptions - List 2019-06-01 and later.
-            if subscription_dict[_SUBSCRIPTION_NAME] != _TENANT_LEVEL_ACCOUNT_NAME:
+            if s.id.startswith('/subscriptions'):
                 if hasattr(s, 'home_tenant_id'):
                     subscription_dict[_HOME_TENANT_ID] = s.home_tenant_id
                 if hasattr(s, 'managed_by_tenants'):
@@ -423,14 +436,23 @@ class Profile:
             consolidated.append(subscription_dict)
         return consolidated
 
-    def _build_tenant_level_accounts(self, tenants):
+    def _build_tenant_stub(self, tenants):
         result = []
         for t in tenants:
             s = self._new_account()
-            s.id = '/subscriptions/' + t
-            s.subscription = t
+            s.id = '/tenants/' + t
             s.tenant_id = t
             s.display_name = _TENANT_LEVEL_ACCOUNT_NAME
+            result.append(s)
+        return result
+
+    def _build_tenant_account(self, tenants):
+        result = []
+        for t in tenants:
+            s = self._new_account()
+            s.id = t.id
+            s.tenant_id = t.tenant_id
+            s.display_name = t.display_name
             result.append(s)
         return result
 
@@ -782,7 +804,7 @@ class Profile:
 
             if not subscriptions:
                 if s[_SUBSCRIPTION_NAME] == _TENANT_LEVEL_ACCOUNT_NAME:
-                    subscriptions = self._build_tenant_level_accounts([s[_TENANT_ID]])
+                    subscriptions = self._build_tenant_stub([s[_TENANT_ID]])
 
                 if not subscriptions:
                     continue
@@ -909,6 +931,13 @@ class SubscriptionFinder:
         result = self.find_using_specific_tenant(tenant, token)
         self.tenants = [tenant]
         return result
+
+    def list_tenants(self, credential):
+        from azure.cli.core.credential import CredentialAdaptor
+        credential = CredentialAdaptor(credential)
+        client = self._arm_client_factory(credential)
+        tenants = client.tenants.list()
+        return list(tenants)
 
     def find_using_common_tenant(self, username, credential=None):
         # pylint: disable=too-many-statements

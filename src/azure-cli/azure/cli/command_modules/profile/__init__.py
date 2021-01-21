@@ -59,11 +59,8 @@ class ProfileCommandsLoader(AzCommandsLoader):
             c.argument('service_principal', action='store_true', help='The credential representing a service principal.')
             c.argument('username', options_list=['--username', '-u'], help='user name, service principal, or managed service identity ID')
             c.argument('tenant', options_list=['--tenant', '-t'], help='The AAD tenant, must provide when using service principals.', validator=validate_tenant)
-            c.argument('tenant_access', action='store_true',
-                       deprecate_info=c.deprecate(target='--tenant-access', hide=True),
-                       help='Only log in to the home tenant or the tenant specified by --tenant. CLI will not perform '
-                            'ARM operations to list tenants and subscriptions. Then you may run tenant-level commands, '
-                            'such as `az ad`, `az account get-access-token`.')
+            c.argument('access_level', arg_type=get_enum_type(['auth', 'tenant', 'subscription']),
+                       help='The level to access Azure.')
             c.argument('allow_no_subscriptions', action='store_true',
                        help="Support access tenants without subscriptions. It's uncommon but useful to run tenant level commands, such as `az ad`")
             c.ignore('_subscription')  # hide the global subscription parameter
