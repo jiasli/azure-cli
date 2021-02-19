@@ -531,7 +531,7 @@ def supported_resource_type(api_profile, resource_type):
         return False
 
 
-def _get_attr(sdk_path, mod_attr_path, checked=True):
+def _get_attr(sdk_path, mod_attr_path, checked=False):
     try:
         attr_mod, attr_path = mod_attr_path.split('#') \
             if '#' in mod_attr_path else (mod_attr_path, '')
@@ -570,7 +570,7 @@ def get_versioned_sdk_path(api_profile, resource_type, operation_group=None):
 
 
 def get_versioned_sdk(api_profile, resource_type, *attr_args, **kwargs):
-    checked = kwargs.get('checked', True)
+    checked = kwargs.get('checked', None)
     sub_mod_prefix = kwargs.get('mod', None)
     operation_group = kwargs.get('operation_group', None)
     sdk_path = get_versioned_sdk_path(api_profile, resource_type, operation_group)

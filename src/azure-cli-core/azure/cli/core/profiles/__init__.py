@@ -55,7 +55,7 @@ def get_sdk(cli_ctx, resource_type, *attr_args, **kwargs):
     """ Get any SDK object that's versioned using the current API version for resource_type.
         Supported keyword arguments:
             checked - A boolean specifying if this method should suppress/check import exceptions
-                        or not. By default, None is returned.
+                        or not. By default, ImportError is raised.
             mod - A string specifying the submodule that all attr_args should be prefixed with.
             operation_group - A string specifying the operation group name we want models.
 
