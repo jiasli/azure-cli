@@ -755,7 +755,8 @@ class AzCommandsLoader(CLICommandsLoader):  # pylint: disable=too-many-instance-
         from azure.cli.core.profiles import get_sdk
         resource_type = kwargs.get('resource_type', self._get_resource_type())
         operation_group = kwargs.get('operation_group', self.module_kwargs.get('operation_group', None))
-        return get_sdk(self.cli_ctx, resource_type, *attr_args, mod='models', operation_group=operation_group)
+        return get_sdk(self.cli_ctx, resource_type, *attr_args, mod='models', operation_group=operation_group,
+                       checked=True)
 
     def command_group(self, group_name, command_type=None, **kwargs):
         if command_type:

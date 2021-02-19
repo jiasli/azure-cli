@@ -570,9 +570,8 @@ def get_versioned_sdk_path(api_profile, resource_type, operation_group=None):
 
 
 def get_versioned_sdk(api_profile, resource_type, *attr_args, **kwargs):
-    checked = kwargs.get('checked', None)
-    sub_mod_prefix = kwargs.get('mod', None)
-    operation_group = kwargs.get('operation_group', None)
+    sub_mod_prefix = kwargs.pop('mod', None)
+    operation_group = kwargs.pop('operation_group', None)
     sdk_path = get_versioned_sdk_path(api_profile, resource_type, operation_group)
     if not attr_args:
         # No attributes to load. Return the versioned sdk
@@ -581,6 +580,6 @@ def get_versioned_sdk(api_profile, resource_type, *attr_args, **kwargs):
     for mod_attr_path in attr_args:
         if sub_mod_prefix and '#' not in mod_attr_path:
             mod_attr_path = '{}#{}'.format(sub_mod_prefix, mod_attr_path)
-        loaded_obj = _get_attr(sdk_path, mod_attr_path, checked)
+        loaded_obj = _get_attr(sdk_path, mod_attr_path, **kwargs)
         results.append(loaded_obj)
     return results[0] if len(results) == 1 else results
