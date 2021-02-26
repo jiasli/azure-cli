@@ -46,9 +46,14 @@ class ProfileCommandsLoader(AzCommandsLoader):
         from azure.cli.core.api import get_subscription_id_list
 
         with self.argument_context('login') as c:
-            c.argument('password', options_list=['--password', '-p'], help="Credentials like user password, or for a service principal, provide client secret or a pem file with key and public certificate. Will prompt if not given.")
+            c.argument('password', options_list=['--password', '-p'],
+                       help="For user account, provide user's password. Will prompt if not given. "
+                            "For service principal, provide client secret or a pem file with key and public certificate.")
             c.argument('service_principal', action='store_true', help='The credential representing a service principal.')
-            c.argument('username', options_list=['--username', '-u'], help='user name, service principal, or managed service identity ID')
+            c.argument('username', options_list=['--username', '-u'],
+                       help="For user account, provide user's email. "
+                            "For service principal, provide application (client) ID or application ID URI."
+                            "For managed identity, provide client ID, object ID or resource ID. ")
             c.argument('tenant', options_list=['--tenant', '-t'], help='The AAD tenant, must provide when using service principals.', validator=validate_tenant)
             c.argument('allow_no_subscriptions', action='store_true', help="Support access tenants without subscriptions. It's uncommon but useful to run tenant level commands, such as 'az ad'")
             c.ignore('_subscription')  # hide the global subscription parameter

@@ -19,14 +19,16 @@ examples:
         az login -u johndoe@contoso.com -p VerySecret
     - name: Log in with a service principal using client secret. Use -p=secret if the first character of the password is '-'.
       text: >
+        az login --service-principal -u 30442391-0000-0000-0000-000000000000 -p VerySecret --tenant contoso.onmicrosoft.com
         az login --service-principal -u http://azure-cli-2016-08-05-14-31-15 -p VerySecret --tenant contoso.onmicrosoft.com
     - name: Log in with a service principal using client certificate.
       text: >
+        az login --service-principal -u 30442391-0000-0000-0000-000000000000 -p ~/mycertfile.pem --tenant contoso.onmicrosoft.com
         az login --service-principal -u http://azure-cli-2016-08-05-14-31-15 -p ~/mycertfile.pem --tenant contoso.onmicrosoft.com
     - name: Log in using a VM's system assigned identity
       text: >
         az login --identity
-    - name: Log in using a VM's user assigned identity. Client or object ids of the service identity also work
+    - name: Log in using a VM's user assigned identity resource ID. Client ID or object ID of the managed identity also work
       text: >
         az login --identity -u /subscriptions/<subscriptionId>/resourcegroups/myRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myID
 """
