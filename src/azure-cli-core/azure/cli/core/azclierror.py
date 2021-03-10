@@ -64,7 +64,8 @@ class AzCLIError(CLIError):
         from azure.cli.core.style import print_styled_text
         with CommandLoggerContext(logger):
             # print error message
-            logger.error(self.error_msg)
+            from azure.cli.core.style import Style
+            print_styled_text((Style.ERROR, self.error_msg))
 
             # print exception trace if there is
             if self.exception_trace:
