@@ -189,7 +189,7 @@ def demo_style(cmd, theme=None):  # pylint: disable=unused-argument
     print_styled_text()
 
     print_styled_text("[Available styles]\n")
-    placeholder = '{:19s}: {}\n'
+    placeholder = '████ {:8s}: {}\n'
     styled_text = [
         (Style.PRIMARY, placeholder.format("White", "Primary text color")),
         (Style.SECONDARY, placeholder.format("Grey", "Secondary text color")),
