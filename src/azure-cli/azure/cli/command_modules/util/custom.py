@@ -192,14 +192,14 @@ def demo_style(cmd, theme=None):  # pylint: disable=unused-argument
     placeholder = '{:19s}: {}\n'
     styled_text = [
         (Style.PRIMARY, placeholder.format("White", "Primary text color")),
-        (Style.SECONDARY, placeholder.format("Bright Black", "Secondary text color")),
-        (Style.IMPORTANT, placeholder.format("Bright/Dark Magent", "Important text color")),
+        (Style.SECONDARY, placeholder.format("Grey", "Secondary text color")),
+        (Style.IMPORTANT, placeholder.format("Magenta", "Important text color")),
         (Style.ACTION, placeholder.format(
-            "Bright/Dark Blue", "Commands, parameters, and system inputs. (White in legacy powershell terminal.)")),
-        (Style.HYPERLINK, placeholder.format("Bright/Dark Cyan", "Hyperlink")),
-        (Style.ERROR, placeholder.format("Bright/Dark Red", "Error message indicator")),
-        (Style.SUCCESS, placeholder.format("Bright/Dark Green", "Success message indicator")),
-        (Style.WARNING, placeholder.format("Bright/Dark Yellow", "Warning message indicator")),
+            "Blue", "Commands, parameters, and system inputs (White in legacy powershell terminal)")),
+        (Style.HYPERLINK, placeholder.format("Cyan", "Hyperlink")),
+        (Style.ERROR, placeholder.format("Red", "Error message indicator")),
+        (Style.SUCCESS, placeholder.format("Green", "Success message indicator")),
+        (Style.WARNING, placeholder.format("Yellow", "Warning message indicator")),
     ]
     print_styled_text(styled_text)
 

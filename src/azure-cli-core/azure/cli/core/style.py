@@ -11,6 +11,9 @@ Currently, only color is supported, underline/bold/italic may be supported in th
 Design spec:
 https://devdivdesignguide.azurewebsites.net/command-line-interface/color-guidelines-for-command-line-interface/
 
+Console Virtual Terminal Sequences:
+https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+
 For a complete demo, see `src/azure-cli/azure/cli/command_modules/util/custom.py` and run `az demo style`.
 """
 
@@ -33,10 +36,27 @@ class Style(str, Enum):
     WARNING = "warning"
 
 
+def _rgb_hex(rgb_hex: str):
+    """
+    Convert RGB hex value to Control Sequences.
+    """
+    template = '\x1b[38;2;{r};{g};{b}m'
+    if rgb_hex.startswith("#"):
+        rgb_hex = rgb_hex[1:]
+
+    rgb = {}
+    for i, c in enumerate(('r', 'g', 'b')):
+        value_str = rgb_hex[i*2: i*2+2]
+        value_int = int(value_str, 16)
+        rgb[c] = value_int
+
+    return template.format(**rgb)
+
+
 # Theme that doesn't contain any style
 THEME_NONE = {}
 
-# Theme to be used on a dark-themed terminal
+# Theme to be used in a dark-themed terminal
 THEME_DARK = {
     # Style to ANSI escape sequence mapping
     # https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
@@ -51,7 +71,7 @@ THEME_DARK = {
     Style.WARNING: Fore.LIGHTYELLOW_EX,
 }
 
-# Theme to be used on a light-themed terminal
+# Theme to be used in a light-themed terminal
 THEME_LIGHT = {
     Style.PRIMARY: Fore.RESET,
     Style.SECONDARY: Fore.LIGHTBLACK_EX,
@@ -64,16 +84,32 @@ THEME_LIGHT = {
 }
 
 
+# Theme to be used in Cloud Shell
+# Text and background's Contrast Ratio should be above 4.5:1
+THEME_CLOUD_SHELL = {
+    Style.PRIMARY: _rgb_hex('#ffffff'),
+    Style.SECONDARY: _rgb_hex('#bcbcbc'),
+    Style.IMPORTANT: _rgb_hex('#f887ff'),
+    Style.ACTION: _rgb_hex('#6cb0ff'),
+    Style.HYPERLINK: _rgb_hex('#72d7d8'),
+    Style.ERROR: _rgb_hex('#f55d5c'),
+    Style.SUCCESS: _rgb_hex('#96ff81'),
+    Style.WARNING: _rgb_hex('#fbd682'),
+}
+
+
 class Theme(str, Enum):
     DARK = 'dark'
     LIGHT = 'light'
+    CLOUD_SHELL = 'cloud-shell'
     NONE = 'none'
 
 
 THEME_DEFINITIONS = {
     Theme.NONE: THEME_NONE,
     Theme.DARK: THEME_DARK,
-    Theme.LIGHT: THEME_LIGHT
+    Theme.LIGHT: THEME_LIGHT,
+    Theme.CLOUD_SHELL: THEME_CLOUD_SHELL
 }
 
 # Blue and bright blue is not visible under the default theme of powershell.exe

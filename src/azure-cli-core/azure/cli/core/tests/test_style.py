@@ -7,7 +7,8 @@ import sys
 import unittest
 from unittest import mock
 
-from azure.cli.core.style import Style, Theme, format_styled_text, print_styled_text, _is_modern_terminal
+from azure.cli.core.style import Style, Theme, format_styled_text, print_styled_text, _is_modern_terminal,\
+    _rgb_hex
 
 
 class TestStyle(unittest.TestCase):
@@ -155,6 +156,14 @@ class TestStyle(unittest.TestCase):
         # Multiple args
         print_styled_text("test text 1", "test text 2")
         mock_print.assert_called_with("test text 1", "test text 2", file=sys.stderr)
+
+    def test_rgb_hex(self):
+
+        result = _rgb_hex("#13A10E")
+        self.assertEqual(result, '\x1b[38;2;19;161;14m')
+
+        result = _rgb_hex("3A96DD")
+        self.assertEqual(result, '\x1b[38;2;58;150;221m')
 
 
 class TestUtils(unittest.TestCase):
