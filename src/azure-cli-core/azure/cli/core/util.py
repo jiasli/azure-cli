@@ -1253,3 +1253,9 @@ def get_parent_proc_name():
         parent_proc_name = _get_parent_proc_name()
         setattr(get_parent_proc_name, "return_value", parent_proc_name)
     return getattr(get_parent_proc_name, "return_value")
+
+
+def is_modern_terminal():
+    """In addition to knack.util.is_modern_terminal, detect Cloud Shell."""
+    from knack.util import is_modern_terminal
+    return is_modern_terminal() or in_cloud_console()

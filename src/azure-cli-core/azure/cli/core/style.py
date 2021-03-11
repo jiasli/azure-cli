@@ -17,9 +17,10 @@ https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequen
 For a complete demo, see `src/azure-cli/azure/cli/command_modules/util/custom.py` and run `az demo style`.
 """
 
-import os
 import sys
 from enum import Enum
+
+from knack.util import is_modern_terminal
 
 
 class Style(str, Enum):
@@ -228,27 +229,3 @@ def highlight_command(raw_command):
         styled_command.append((style, spaced_arg))
 
     return styled_command
-
-
-def _is_modern_terminal():
-    # Windows Terminal: https://github.com/microsoft/terminal/issues/1040
-    if 'WT_SESSION' in os.environ:
-        return True
-    # VS Code: https://github.com/microsoft/vscode/pull/30346
-    if os.environ.get('TERM_PROGRAM', '').lower() == 'vscode':
-        return True
-    return False
-
-
-def is_modern_terminal():
-    """Detect whether the current terminal is a modern terminal that supports Unicode and
-    Console Virtual Terminal Sequences.
-
-    Currently, these terminals can be detected:
-      - Windows Terminal
-      - VS Code terminal
-    """
-    # This function wraps _is_modern_terminal and use a function-level cache to save the result.
-    if not hasattr(is_modern_terminal, "return_value"):
-        setattr(is_modern_terminal, "return_value", _is_modern_terminal())
-    return getattr(is_modern_terminal, "return_value")

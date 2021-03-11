@@ -193,9 +193,6 @@ class AzCli(CLI):
             theme = 'none'
         format_styled_text.theme = theme
 
-        # No need to init colorama in a modern terminal
-        self._should_init_colorama = self._should_init_colorama and not is_modern_terminal()
-
 
 class MainCommandsLoader(CLICommandsLoader):
 
