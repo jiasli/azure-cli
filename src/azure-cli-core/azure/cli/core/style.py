@@ -88,7 +88,7 @@ THEME_CLOUD_SHELL = {
     Style.ACTION: _rgb_hex('#6cb0ff'),
     Style.HYPERLINK: _rgb_hex('#72d7d8'),
     Style.ERROR: _rgb_hex('#f55d5c'),
-    Style.SUCCESS: _rgb_hex('#96ff81'),
+    Style.SUCCESS: _rgb_hex('#70d784'),
     Style.WARNING: _rgb_hex('#fbd682'),
 }
 
