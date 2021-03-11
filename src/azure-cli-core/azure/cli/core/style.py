@@ -21,8 +21,6 @@ import os
 import sys
 from enum import Enum
 
-from colorama import Fore
-
 
 class Style(str, Enum):
     PRIMARY = "primary"
@@ -58,29 +56,26 @@ THEME_NONE = {}
 
 # Theme to be used in a dark-themed terminal
 THEME_DARK = {
-    # Style to ANSI escape sequence mapping
-    # https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-    Style.PRIMARY: Fore.RESET,
-    Style.SECONDARY: Fore.LIGHTBLACK_EX,  # may use WHITE, but will lose contrast to LIGHTWHITE_EX
-    Style.IMPORTANT: Fore.LIGHTMAGENTA_EX,
-    Style.ACTION: Fore.LIGHTBLUE_EX,
-    Style.HYPERLINK: Fore.LIGHTCYAN_EX,
-    # Message colors
-    Style.ERROR: Fore.LIGHTRED_EX,
-    Style.SUCCESS: Fore.LIGHTGREEN_EX,
-    Style.WARNING: Fore.LIGHTYELLOW_EX,
+    Style.PRIMARY: '\x1b[39m',  # Foreground Default
+    Style.SECONDARY: '\x1b[90m',  # Bright Foreground Black
+    Style.IMPORTANT: '\x1b[95m',  # Bright Foreground Magenta
+    Style.ACTION: '\x1b[94m',  # Bright Foreground Blue
+    Style.HYPERLINK: '\x1b[96m',  # Bright Foreground Cyan
+    Style.ERROR: '\x1b[91m',  # Bright Foreground Red
+    Style.SUCCESS: '\x1b[92m',  # Bright Foreground Green
+    Style.WARNING: '\x1b[93m'  # Bright Foreground Yellow
 }
 
 # Theme to be used in a light-themed terminal
 THEME_LIGHT = {
-    Style.PRIMARY: Fore.RESET,
-    Style.SECONDARY: Fore.LIGHTBLACK_EX,
-    Style.IMPORTANT: Fore.MAGENTA,
-    Style.ACTION: Fore.BLUE,
-    Style.HYPERLINK: Fore.CYAN,
-    Style.ERROR: Fore.RED,
-    Style.SUCCESS: Fore.GREEN,
-    Style.WARNING: Fore.YELLOW,
+    Style.PRIMARY: '\x1b[39m',  # Foreground Default
+    Style.SECONDARY: '\x1b[90m',  # Bright Foreground Black
+    Style.IMPORTANT: '\x1b[35m',  # Foreground Magenta
+    Style.ACTION: '\x1b[34m',  # Foreground Blue
+    Style.HYPERLINK: '\x1b[36m',  # Foreground Cyan
+    Style.ERROR: '\x1b[31m',  # Foreground Red
+    Style.SUCCESS: '\x1b[32m',  # Foreground Green
+    Style.WARNING: '\x1b[33m'  # Foreground Yellow
 }
 
 
@@ -114,8 +109,8 @@ THEME_DEFINITIONS = {
 
 # Blue and bright blue is not visible under the default theme of powershell.exe
 POWERSHELL_COLOR_REPLACEMENT = {
-    Fore.BLUE: Fore.RESET,
-    Fore.LIGHTBLUE_EX: Fore.RESET
+    '\x1b[34m': '\x1b[39m',  # Foreground Blue
+    '\x1b[94m': '\x1b[39m'  # Bright Foreground Blue
 }
 
 
@@ -196,7 +191,7 @@ def format_styled_text(styled_text, theme=None):
 
     # Reset control sequence
     if theme is not THEME_NONE:
-        formatted_parts.append(Fore.RESET)
+        formatted_parts.append('\x1b[39m')
     return ''.join(formatted_parts)
 
 
