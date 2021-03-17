@@ -102,10 +102,10 @@ class Theme(str, Enum):
 
 
 THEME_DEFINITIONS = {
-    Theme.NONE: THEME_NONE,
     Theme.DARK: THEME_DARK,
     Theme.LIGHT: THEME_LIGHT,
-    Theme.CLOUD_SHELL: THEME_CLOUD_SHELL
+    Theme.CLOUD_SHELL: THEME_CLOUD_SHELL,
+    Theme.NONE: THEME_NONE
 }
 
 # Blue and bright blue is not visible under the default theme of powershell.exe
@@ -145,11 +145,7 @@ def format_styled_text(styled_text, theme=None):
 
     # Convert str to the theme dict
     if isinstance(theme, str):
-        try:
-            theme = THEME_DEFINITIONS[theme]
-        except KeyError:
-            from azure.cli.core.azclierror import CLIInternalError
-            raise CLIInternalError("Invalid theme. Supported themes: none, dark, light")
+        theme = get_theme_dict(theme)
 
     # Cache the value of is_legacy_powershell
     if not hasattr(format_styled_text, "_is_legacy_powershell"):
@@ -229,3 +225,12 @@ def highlight_command(raw_command):
         styled_command.append((style, spaced_arg))
 
     return styled_command
+
+
+def get_theme_dict(theme: str):
+    try:
+        return THEME_DEFINITIONS[theme]
+    except KeyError:
+        available_themes = ', '.join([m.value for m in Theme.__members__.values()])
+        from azure.cli.core.azclierror import CLIInternalError
+        raise CLIInternalError("Invalid theme. Supported themes: {}".format(available_themes))

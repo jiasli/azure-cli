@@ -257,6 +257,15 @@ def demo_style(cmd, theme=None):  # pylint: disable=unused-argument
         (Style.PRIMARY, ". To switch to another subscription, run "),
         (Style.ACTION, "az account set --subscription"),
         (Style.PRIMARY, " <subscription ID>\n"),
-        (Style.WARNING, "WARNING: The subscription has been disabled!")
+        (Style.WARNING, "WARNING: The subscription has been disabled!\n")
     ]
     print_styled_text(styled_text)
+
+    print_styled_text("[logs]\n")
+
+    # Print logs
+    logger.debug("This is a debug log entry.")
+    logger.info("This is a info log entry.")
+    logger.warning("This is a warning log entry.")
+    logger.error("This is a error log entry.")
+    logger.critical("This is a critical log entry.")

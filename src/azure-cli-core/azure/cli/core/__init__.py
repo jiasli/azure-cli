@@ -183,7 +183,7 @@ class AzCli(CLI):
 
     def _configure_style(self):
         from azure.cli.core.util import in_cloud_console
-        from azure.cli.core.style import format_styled_text, is_modern_terminal
+        from azure.cli.core.style import format_styled_text, get_theme_dict, Style
 
         # Configure Style
         if self.enable_color:
@@ -192,6 +192,15 @@ class AzCli(CLI):
         else:
             theme = 'none'
         format_styled_text.theme = theme
+
+        # Apply color settings to knack
+        from knack.util import color_map
+        theme_dict = get_theme_dict(theme)
+        color_map['error'] = theme_dict[Style.ERROR]
+        color_map['warning'] = theme_dict[Style.WARNING]
+        # experimental and preview are not defined by style framework, temporarily use bright cyan
+        color_map['experimental'] = theme_dict[Style.HYPERLINK]
+        color_map['preview'] = theme_dict[Style.HYPERLINK]
 
 
 class MainCommandsLoader(CLICommandsLoader):
