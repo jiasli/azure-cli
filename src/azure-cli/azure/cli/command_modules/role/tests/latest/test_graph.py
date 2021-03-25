@@ -5,6 +5,7 @@
 import json
 import mock
 import unittest
+import re
 import datetime
 import dateutil
 import dateutil.parser
@@ -16,12 +17,12 @@ from knack.util import CLIError
 class ServicePrincipalExpressCreateScenarioTest(ScenarioTest):
 
     @AllowLargeResponse(8192)
-    def test_sp_create_scenario(self):
+    def test_sp_create_for_rbac_scenario(self):
         self.kwargs['display_name'] = self.create_random_name('clisp-test-', 20)
-        self.kwargs['app_id_uri'] = 'http://' + self.kwargs['display_name']
         # create app through express option
-        self.cmd('ad sp create-for-rbac -n {display_name} --skip-assignment',
-                 checks=self.check('name', '{app_id_uri}'))
+        result = self.cmd('ad sp create-for-rbac -n {display_name} --skip-assignment').get_output_in_json()
+        self.kwargs['app_id_uri'] = result['name']
+        self.assertTrue(re.match(r"https://[\w.]+/[\w-]+$", self.kwargs['app_id_uri']))
 
         # show/list app
         self.cmd('ad app show --id {app_id_uri}',
@@ -287,11 +288,9 @@ class CreateForRbacScenarioTest(ScenarioTest):
     @AllowLargeResponse()
     def test_revoke_sp_for_rbac(self):
         self.kwargs['display_name'] = self.create_random_name(prefix='cli-graph', length=14)
-        self.kwargs['name'] = 'http://' + self.kwargs['display_name']
 
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-            self.cmd('ad sp create-for-rbac -n {display_name}')
-
+            self.kwargs['name'] = self.cmd('ad sp create-for-rbac -n {display_name}').get_output_in_json()['name']
             self.cmd('ad sp list --spn {name}')
 
             self.cmd('ad app list --identifier-uri {name}')
@@ -312,12 +311,12 @@ class CreateForRbacScenarioTest(ScenarioTest):
     @AllowLargeResponse()
     def test_create_for_rbac_idempotent(self):
         self.kwargs['display_name'] = self.create_random_name(prefix='sp_', length=14)
-        self.kwargs['name'] = 'http://' + self.kwargs['display_name']
 
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             try:
-                self.cmd('ad sp create-for-rbac -n {display_name}')
-                self.cmd('ad sp create-for-rbac -n {display_name}')
+                self.kwargs['name'] = self.cmd('ad sp create-for-rbac -n {display_name}').get_output_in_json()['name']
+                name2 = self.cmd('ad sp create-for-rbac -n {display_name}').get_output_in_json()['name']
+                self.assertEqual(self.kwargs['name'], name2)
                 result = self.cmd('ad sp list --spn {name}').get_output_in_json()
                 self.assertEqual(1, len(result))
                 result = self.cmd('role assignment list --assignee {name}').get_output_in_json()
@@ -530,13 +529,12 @@ class GraphAppCredsScenarioTest(ScenarioTest):
             'display_name2': self.create_random_name('cli-app-', 15),
             'test_pwd': 'verysecretpwd123*'
         }
-        self.kwargs['app'] = 'http://' + self.kwargs['display_name']
-        self.kwargs['app2'] = 'http://' + self.kwargs['display_name2']
         app_id = None
         app_id2 = None
         try:
             result = self.cmd('ad sp create-for-rbac --name {display_name} --skip-assignment').get_output_in_json()
             app_id = result['appId']
+            self.kwargs['app'] = result['name']
 
             result = self.cmd('ad sp credential list --id {app}').get_output_in_json()
             key_id = result[0]['keyId']
@@ -576,6 +574,7 @@ class GraphAppCredsScenarioTest(ScenarioTest):
 
             result = self.cmd('ad sp create-for-rbac --name {display_name2} --skip-assignment --years 10').get_output_in_json()
             app_id2 = result['appId']
+            self.kwargs['app2'] = result['name']
             result = self.cmd('ad sp credential list --id {app2}', checks=self.check('length([*])', 1)).get_output_in_json()
             diff = dateutil.parser.parse(result[0]['endDate']).replace(tzinfo=None) - datetime.datetime.utcnow()
             self.assertTrue(diff.days > 1)  # it is just a smoke test to verify the credential does get applied

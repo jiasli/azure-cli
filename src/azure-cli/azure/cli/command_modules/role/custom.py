@@ -5,11 +5,11 @@
 
 import base64
 import datetime
-import json
-import re
-import os
-import uuid
 import itertools
+import json
+import os
+import re
+import uuid
 from dateutil.relativedelta import relativedelta
 import dateutil.parser
 
@@ -1399,7 +1399,8 @@ def create_service_principal_for_rbac(
     _RETRY_TIMES = 36
     app_display_name, existing_sps = None, None
 
-    app_identifier_uri, app_display_name = _to_valid_identifier_uri(cmd.cli_ctx, name)
+    domain = _get_organization_verified_domain(cmd.cli_ctx)
+    app_identifier_uri, app_display_name = _to_valid_identifier_uri(name, domain)
 
     if app_identifier_uri:
         # app's identifierUris appear as members of service principal's servicePrincipalNames
@@ -1864,7 +1865,7 @@ def _get_organization(cli_ctx):
     return org
 
 
-def _get_organization_verified_domains(cli_ctx):
+def _get_organization_verified_domain(cli_ctx):
     org = _get_organization(cli_ctx)
     domains = org['verifiedDomains']
     default_domain = next(d for d in domains if d['isDefault'] == True)
