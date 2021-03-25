@@ -1398,32 +1398,19 @@ def create_service_principal_for_rbac(
     sp_oid = None
     _RETRY_TIMES = 36
     app_display_name, existing_sps = None, None
-    if name:
-        if '://' not in name:
-            prefix = "http://"
-            app_display_name = name
-            # replace space, /, \ with - to make it a valid URI
-            name = name.replace(' ', '-').replace('/', '-').replace('\\', '-')
-            logger.warning('Changing "%s" to a valid URI of "%s%s", which is the required format'
-                           ' used for service principal names', name, prefix, name)
-            name = prefix + name  # normalize be a valid graph service principal name
-        else:
-            app_display_name = name.split('://', 1)[-1]
 
-    if name:
-        query_exp = 'servicePrincipalNames/any(x:x eq \'{}\')'.format(name)
+    app_identifier_uri, app_display_name = _to_valid_identifier_uri(cmd.cli_ctx, name)
+
+    if app_identifier_uri:
+        # app's identifierUris appear as members of service principal's servicePrincipalNames
+        query_exp = 'servicePrincipalNames/any(x:x eq \'{}\')'.format(app_identifier_uri)
         existing_sps = list(graph_client.service_principals.list(filter=query_exp))
         if existing_sps:
+            # Honor the displayName of the existing app
             app_display_name = existing_sps[0].display_name
-            name = existing_sps[0].service_principal_names[0]
 
     app_start_date = datetime.datetime.now(TZ_UTC)
     app_end_date = app_start_date + relativedelta(years=years or 1)
-
-    app_display_name = app_display_name or ('azure-cli-' +
-                                            app_start_date.strftime('%Y-%m-%d-%H-%M-%S'))
-    if name is None:
-        name = 'http://' + app_display_name  # just a valid uri, no need to exist
 
     password, public_cert_string, cert_file, cert_start_date, cert_end_date = \
         _process_service_principal_creds(cmd.cli_ctx, years, app_start_date, app_end_date, cert, create_cert,
@@ -1437,7 +1424,7 @@ def create_service_principal_for_rbac(
     aad_application = create_application(cmd,
                                          display_name=app_display_name,
                                          homepage=homepage,
-                                         identifier_uris=[name],
+                                         identifier_uris=[app_identifier_uri],
                                          available_to_other_tenants=False,
                                          password=password,
                                          key_value=public_cert_string,
@@ -1461,9 +1448,9 @@ def create_service_principal_for_rbac(
                     logger.warning('Retrying service principal creation: %s/%s', retry_time + 1, _RETRY_TIMES)
                 else:
                     logger.warning(
-                        "Creating service principal failed for appid '%s'. Trace followed:\n%s",
-                        name, ex.response.headers if hasattr(ex,
-                                                             'response') else ex)  # pylint: disable=no-member
+                        "Creating service principal failed for '%s'. Trace followed:\n%s",
+                        app_identifier_uri, ex.response.headers
+                        if hasattr(ex, 'response') else ex)  # pylint: disable=no-member
                     raise
     sp_oid = aad_sp.object_id
 
@@ -1509,7 +1496,7 @@ def create_service_principal_for_rbac(
     result = {
         'appId': app_id,
         'password': password,
-        'name': name,
+        'name': app_identifier_uri,
         'displayName': app_display_name,
         'tenant': graph_client.config.tenant_id
     }
@@ -1868,3 +1855,57 @@ def list_user_assigned_identities(cmd, resource_group_name=None):
     if resource_group_name:
         return client.user_assigned_identities.list_by_resource_group(resource_group_name)
     return client.user_assigned_identities.list_by_subscription()
+
+
+def _get_organization(cli_ctx):
+    from azure.cli.core.util import send_raw_request
+    url = '{}/v1.0/organization'.format(cli_ctx.cloud.endpoints.microsoft_graph_resource_id.rstrip('/'))
+    org = send_raw_request(cli_ctx, "GET", url).json()['value'][0]
+    return org
+
+
+def _get_organization_verified_domains(cli_ctx):
+    org = _get_organization(cli_ctx)
+    domains = org['verifiedDomains']
+    default_domain = next(d for d in domains if d['isDefault'] == True)
+    return default_domain['name']
+
+
+def _to_valid_identifier_uri(name, verified_domain):
+    """
+    Parse user-provided service principal 'name' to a valid identifierUri and displayName
+
+    :return: A tuple of (identifierUri, displayName)
+    """
+    prefix = "https://{}/".format(verified_domain)
+
+    if name:
+        if '://' in name:
+            # e.g. 'https://myorg.onmicrosoft.com/myapp' (verified domain)
+            # User should be responsible for providing a valid identifierUri
+            app_identifier_uri = name
+            split_result = name.split('/')
+            app_display_name = split_result[-1]
+
+            # If identifierUri (like https://myapp) is not under verified domain, show warning
+            verified_domain_alert = ''
+            if len(split_result) <= 3:
+                verified_domain_alert = "In the future, identifierUri must be under tenant's verified domains. " \
+                                        "Consider using '{}'".format(prefix + app_display_name)
+            logger.warning("Using '%s' as identifierUri. %s", name, verified_domain_alert)
+
+        else:
+            # e.g. 'myapp'
+            # replace space, /, \ with - to make it a valid identifierUri
+            app_display_name = name.replace(' ', '-').replace('/', '-').replace('\\', '-')
+            app_identifier_uri = prefix + name  # normalize be a valid graph service principal name
+            logger.warning("Changing '%s' to a valid URI '%s', which is the required format"
+                           " used for Service Principal names.", name, app_identifier_uri)
+    else:
+        # No name is provided, create a new one
+        app_display_name = 'azure-cli-' + datetime.datetime.utcnow().strftime('%Y-%m-%d-%H-%M-%S')
+        app_identifier_uri = prefix + app_display_name  # just a valid uri, no need to exist
+        logger.warning("Service Principal name is not provided. Generated '%s'", app_identifier_uri)
+
+    logger.info('  identifierUri: %s, displayName: %s', app_identifier_uri, app_display_name)
+    return app_identifier_uri, app_display_name
