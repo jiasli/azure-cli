@@ -109,11 +109,10 @@ def _load_tokens_from_file(file_path):
     logger.warning("_load_tokens_from_file")
     if os.path.isfile(file_path):
         try:
-            logger.warning(get_file_json)
-            logger.warning("get_file_json.side_effect: %s", get_file_json.side_effect)
+            logger.warning("calling %s", get_file_json)
             return get_file_json(file_path, throw_on_empty=False) or []
         except (CLIError, ValueError) as ex:
-            logger.warning(ex)
+            logger.warning("Error hit! %s", ex)
             raise CLIError("Failed to load token files. If you have a repro, please log an issue at "
                            "https://github.com/Azure/azure-cli/issues. At the same time, you can clean "
                            "up by running 'az account clear' and then 'az login'. (Inner Error: {})".format(ex))
