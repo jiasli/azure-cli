@@ -106,7 +106,7 @@ _AUTH_CTX_FACTORY = _authentication_context_factory
 
 
 def _load_tokens_from_file(file_path):
-    logger.warning("_load_tokens_from_file")
+
     if os.path.isfile(file_path):
         try:
             logger.warning("calling %s", get_file_json)
@@ -116,6 +116,7 @@ def _load_tokens_from_file(file_path):
             raise CLIError("Failed to load token files. If you have a repro, please log an issue at "
                            "https://github.com/Azure/azure-cli/issues. At the same time, you can clean "
                            "up by running 'az account clear' and then 'az login'. (Inner Error: {})".format(ex))
+    logger.warning("FAILED")
     return []
 
 
