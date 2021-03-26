@@ -28,7 +28,7 @@ steps:
       echo fullTest: ${{ parameters.fullTest }}
       echo Build.Reason: $(Build.Reason)
 
-      pytest src/azure-cli-core/azure/cli/core/tests/test_profile.py -n 2 --forked -vvv
+      pytest src/azure-cli-core/azure/cli/core/tests -n 2 --forked -vvv
     displayName: "Test on Profile ${{ parameters.profile }}"
     env:
       ADO_PULL_REQUEST_LATEST_COMMIT: $(System.PullRequest.TargetBranch)
