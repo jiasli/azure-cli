@@ -106,10 +106,14 @@ _AUTH_CTX_FACTORY = _authentication_context_factory
 
 
 def _load_tokens_from_file(file_path):
+    logger.warning("_load_tokens_from_file")
     if os.path.isfile(file_path):
         try:
+            logger.warning(get_file_json)
+            logger.warning("get_file_json.side_effect: %s", get_file_json.side_effect)
             return get_file_json(file_path, throw_on_empty=False) or []
         except (CLIError, ValueError) as ex:
+            logger.warning(ex)
             raise CLIError("Failed to load token files. If you have a repro, please log an issue at "
                            "https://github.com/Azure/azure-cli/issues. At the same time, you can clean "
                            "up by running 'az account clear' and then 'az login'. (Inner Error: {})".format(ex))
@@ -1139,6 +1143,7 @@ class CredsCache:
         return self.load_adal_token_cache()
 
     def load_adal_token_cache(self):
+        logger.warning(self._adal_token_cache_attr)
         if self._adal_token_cache_attr is None:
             import adal
             all_entries = _load_tokens_from_file(self._token_file)

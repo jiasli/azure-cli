@@ -469,6 +469,7 @@ def get_json_object(json_string):
 
 
 def get_file_json(file_path, throw_on_empty=True, preserve_order=False):
+    logger.warning("Real get_file_json is called!")
     content = read_file_content(file_path)
     if not content and not throw_on_empty:
         return None
