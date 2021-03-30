@@ -217,6 +217,11 @@ def _get_mgmt_service_client(cli_ctx,
         client_kwargs['credential_scopes'] = credential_scopes or \
             resource_to_scopes(cli_ctx.cloud.endpoints.active_directory_resource_id)
 
+        # Enable CAE support in mgmt SDK
+        from azure.mgmt.core.policies import ARMChallengeAuthenticationPolicy
+        policy = ARMChallengeAuthenticationPolicy(cred, "https://management.azure.com/.default")
+        client_kwargs['authentication_policy'] = policy
+
     if subscription_bound:
         client = client_type(cred, subscription_id, **client_kwargs)
     else:

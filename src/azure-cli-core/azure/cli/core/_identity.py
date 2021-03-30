@@ -17,7 +17,8 @@ from azure.identity import (
     ClientSecretCredential,
     CertificateCredential,
     ManagedIdentityCredential,
-    EnvironmentCredential
+    EnvironmentCredential,
+    TokenCachePersistenceOptions
 )
 
 from ._environment import get_config_dir
@@ -65,6 +66,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         self._msal_app_instance = None
         # Store for Service principal credential persistence
         self._msal_secret_store = MsalSecretStore(fallback_to_plaintext=self.allow_unencrypted)
+        self._cache_persistence_options = TokenCachePersistenceOptions(name="azcli", allow_unencrypted_storage=True)
 
         # TODO: Allow disabling SSL verification
         # The underlying requests lib of MSAL has been patched with Azure Core by MsalTransportAdapter
@@ -90,9 +92,9 @@ class Identity:  # pylint: disable=too-many-instance-attributes
 
     def _load_msal_cache(self):
         # sdk/identity/azure-identity/azure/identity/_internal/msal_credentials.py:95
-        from azure.identity._internal.persistent_cache import load_user_cache
+        from azure.identity._persistent_cache import _load_persistent_cache
         # Store for user token persistence
-        cache = load_user_cache(self.allow_unencrypted)
+        cache = _load_persistent_cache(self._cache_persistence_options)
         return cache
 
     def _build_persistent_msal_app(self, authority):
@@ -120,8 +122,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         credential = InteractiveBrowserCredential(authority=self.authority,
                                                   tenant_id=self.tenant_id,
                                                   client_id=self.client_id,
-                                                  enable_persistent_cache=True,
-                                                  allow_unencrypted_cache=self.allow_unencrypted,
+                                                  cache_persistence_options=self._cache_persistence_options,
                                                   **self._credential_kwargs)
         auth_record = credential.authenticate(scopes=scopes)
         # todo: remove after ADAL token deprecation
@@ -139,9 +140,8 @@ class Identity:  # pylint: disable=too-many-instance-attributes
             credential = DeviceCodeCredential(authority=self.authority,
                                               tenant_id=self.tenant_id,
                                               client_id=self.client_id,
-                                              enable_persistent_cache=True,
                                               prompt_callback=prompt_callback,
-                                              allow_unencrypted_cache=self.allow_unencrypted,
+                                              cache_persistence_options=self._cache_persistence_options,
                                               **self._credential_kwargs)
 
             auth_record = credential.authenticate(scopes=scopes)
@@ -163,8 +163,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
                                                 client_id=self.client_id,
                                                 username=username,
                                                 password=password,
-                                                enable_persistent_cache=True,
-                                                allow_unencrypted_cache=self.allow_unencrypted,
+                                                cache_persistence_options=self._cache_persistence_options,
                                                 **self._credential_kwargs)
         auth_record = credential.authenticate(scopes=scopes)
 
@@ -352,8 +351,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         auth_record = AuthenticationRecord(self.tenant_id, self.client_id, self.authority,
                                            account['home_account_id'], username)
         return InteractiveBrowserCredential(authentication_record=auth_record, disable_automatic_authentication=True,
-                                            enable_persistent_cache=True,
-                                            allow_unencrypted_cache=self.allow_unencrypted,
+                                            cache_persistence_options=self._cache_persistence_options,
                                             **self._credential_kwargs)
 
     def get_service_principal_credential(self, client_id, use_cert_sn_issuer):
