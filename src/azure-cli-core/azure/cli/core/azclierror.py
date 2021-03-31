@@ -12,9 +12,6 @@ from knack.log import get_logger
 logger = get_logger(__name__)
 # pylint: disable=unnecessary-pass
 
-UNAUTHORIZED_MESSAGE = ("The access token has expired or been revoked due to being blocked by Continuous Access "
-                        "Evaluation. To re-authenticate, please run `az login`. "
-                        "(Silent re-authentication will be attempted in the future.)")
 
 # Error types in AzureCLI are from different sources, and there are many general error types like CLIError, AzureError.
 # Besides, many error types with different names are actually showing the same kind of error.
@@ -28,9 +25,10 @@ class AzCLIError(CLIError):
     """ Base class for all the AzureCLI defined error classes.
     DO NOT raise this error class in your codes. """
 
-    def __init__(self, error_msg, recommendation=None):
+    def __init__(self, error_msg, recommendation=None, original_error=None):
         # error message
         self.error_msg = error_msg
+        self.original_error = original_error
 
         # manual recommendations provided based on developers' knowledge
         self.recommendations = []
@@ -172,8 +170,32 @@ class BadRequestError(UserFault):
 
 class UnauthorizedError(UserFault):
     """ Unauthorized request: 401 error """
-    def __init__(self, error_msg, recommendation=UNAUTHORIZED_MESSAGE):
-        super().__init__(error_msg, recommendation)
+
+    def __init__(self, error_msg, recommendation=None, original_error=None):
+
+        def _extract_claims(challenge):
+            # Copied from azure.mgmt.core.policies._authentication._parse_claims_challenge
+            from azure.mgmt.core.policies._authentication import _parse_challenges
+            parsed_challenges = _parse_challenges(challenge)
+            if len(parsed_challenges) != 1 or "claims" not in parsed_challenges[0].parameters:
+                # no or multiple challenges, or no claims directive
+                return None
+
+            encoded_claims = parsed_challenges[0].parameters["claims"]
+            padding_needed = -len(encoded_claims) % 4
+            return encoded_claims + "=" * padding_needed
+
+        claims = _extract_claims(original_error.response.headers.get('WWW-Authenticate'))
+
+        from azure.cli.core.credential import _generate_login_command
+        login_command = _generate_login_command(claims=claims)
+
+        recommendation = (
+            "The access token has expired or been revoked by Continuous Access Evaluation. "
+            "Silent re-authentication will be attempted in the future. "
+            "To re-authenticate, please run:\n{}")
+        recommendation = recommendation.format(login_command)
+        super().__init__(error_msg, recommendation=recommendation, original_error=original_error)
 
 
 class ForbiddenError(UserFault):

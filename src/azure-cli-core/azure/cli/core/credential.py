@@ -52,14 +52,16 @@ class CredentialAdaptor:
             raise err
 
         except AuthenticationRequiredError as err:
-            refined_message = "Interactive authentication is required to get a token."
-            refined_message = refined_message + "\n\nError detail:\n" + err.error_details
+            error_message = "Interactive authentication is required to get a token.\n\n" \
+                            "Error detail:\n{}".format(err.error_details)
+
+            login_command = _generate_login_command(claims=err.claims)
 
             recommendation = "The refresh token has been revoked due to password change or " \
-                             "being blocked by Conditional Access policy. " \
-                             "To re-authenticate, " +\
-                             ("please refresh Azure Portal." if in_cloud_console() else "please run `az login`.")
-            raise AuthenticationError(refined_message, recommendation) from err
+                             "by Conditional Access policy. To re-authenticate, please {action}"
+            recommendation = recommendation.format(
+                action="refresh Azure Portal." if in_cloud_console() else "run:\n{}".format(login_command))
+            raise AuthenticationError(error_message, recommendation) from err
 
         except ClientAuthenticationError as err:
             # pylint: disable=no-member
@@ -130,3 +132,20 @@ def _normalize_scopes(scopes):
         return scopes[1:]
 
     return scopes
+
+
+def _generate_login_command(claims=None):
+    login_command = ['az login']
+    if claims:
+        import base64
+        try:
+            base64.urlsafe_b64decode(claims)
+            is_base64 = True
+        except ValueError as ex:
+            is_base64 = False
+
+        if not is_base64:
+            claims = base64.urlsafe_b64encode(claims.encode()).decode()
+
+        login_command.append('--claims {}'.format(claims))
+    return ' '.join(login_command)
