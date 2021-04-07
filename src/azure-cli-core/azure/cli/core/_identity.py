@@ -425,7 +425,6 @@ class Identity:  # pylint: disable=too-many-instance-attributes
                        "It contains login information of all logged-in users. Make sure you protect it safely.", path)
 
         cache = self._load_msal_cache()
-        cache._reload_if_necessary()  # pylint: disable=protected-access
         with open(path, "w") as fd:
             fd.write(cache.serialize())
 

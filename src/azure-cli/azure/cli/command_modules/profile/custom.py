@@ -190,7 +190,7 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
     return all_subscriptions
 
 
-def logout(cmd, username=None, clear_credential=False):
+def logout(cmd, username=None, clear_credential=True):
     """Log out to remove access to Azure subscriptions"""
     if in_cloud_console():
         logger.warning(_CLOUD_CONSOLE_LOGOUT_WARNING)
