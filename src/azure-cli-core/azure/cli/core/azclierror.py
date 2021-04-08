@@ -187,14 +187,14 @@ class UnauthorizedError(UserFault):
 
         claims = _extract_claims(original_error.response.headers.get('WWW-Authenticate'))
 
-        from azure.cli.core.credential import _generate_login_command
-        login_command = _generate_login_command(claims=claims)
+        from azure.cli.core.credential import _generate_login_command, _generate_login_message
+        # login_command = _generate_login_command(claims=claims)
+        login_message = _generate_login_message(claims=claims)
 
         recommendation = (
             "The access token has expired or been revoked by Continuous Access Evaluation. "
-            "Silent re-authentication will be attempted in the future. "
-            "To re-authenticate, please run:\n{}")
-        recommendation = recommendation.format(login_command)
+            "Silent re-authentication will be attempted in the future.\n{}")
+        recommendation = recommendation.format(login_message)
         super().__init__(error_msg, recommendation=recommendation, original_error=original_error)
 
 

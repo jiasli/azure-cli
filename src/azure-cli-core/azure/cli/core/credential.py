@@ -130,7 +130,18 @@ def _generate_login_command(scopes=None, claims=None):
             claims = base64.urlsafe_b64encode(claims.encode()).decode()
 
         login_command.append('--claims {}'.format(claims))
+
     return ' '.join(login_command)
+
+
+def _generate_login_message(**kwargs):
+    login_command = _generate_login_command(**kwargs)
+    login_command = 'az logout\naz login'
+    msg = "To re-authenticate, please {}" \
+          "If the problem persists, please contact your tenant administrator.".format(
+              "refresh Azure Portal." if in_cloud_console() else "run:\n{}\n".format(login_command))
+
+    return msg
 
 
 def aad_error_handler(error, scopes=None, claims=None):
@@ -139,14 +150,7 @@ def aad_error_handler(error, scopes=None, claims=None):
     # https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-aadsts-error-codes
     # Search for an error code at https://login.microsoftonline.com/error
     msg = error.get('error_description')
-
-    # login_command = _generate_login_command(claims=claims)
-    login_command = 'az logout\naz login'
-    login_instruction = 'run:\n{}'.format(login_command)
-
-    login_message = ("To re-authenticate, please {}\nIf the problem persists, "
-                     "please contact your tenant administrator."
-                     .format("refresh Azure Portal." if in_cloud_console() else login_instruction))
+    login_message = _generate_login_message(scopes=scopes, claims=claims)
 
     from azure.cli.core.azclierror import AuthenticationError
     raise AuthenticationError(msg, recommendation=login_message)
