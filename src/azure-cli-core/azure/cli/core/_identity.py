@@ -90,6 +90,11 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         #   - Service principal certificate
         self._credential_kwargs['logging_enable'] = True
 
+        # Make MSAL remove existing accounts on successful login.
+        # self._credential_kwargs['remove_existing_account'] = True
+        from azure.cli.core.msal_patch import patch_token_cache_add
+        patch_token_cache_add(self.msal_app.remove_account)
+
     def _load_msal_cache(self):
         # sdk/identity/azure-identity/azure/identity/_internal/msal_credentials.py:95
         from azure.identity._persistent_cache import _load_persistent_cache
@@ -106,7 +111,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         return msal_app
 
     @property
-    def _msal_app(self):
+    def msal_app(self):
         if not self._msal_app_instance:
             # Build the authority in MSAL style, like https://login.microsoftonline.com/your_tenant
             msal_authority = "{}/{}".format(self.authority, self.tenant_id)
@@ -304,15 +309,15 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         return credential, cloud_shell_identity_info
 
     def logout_user(self, user):
-        accounts = self._msal_app.get_accounts(user)
+        accounts = self.msal_app.get_accounts(user)
         logger.info('Before account removal:')
         logger.info(json.dumps(accounts))
 
         # `accounts` are the same user in all tenants, log out all of them
         for account in accounts:
-            self._msal_app.remove_account(account)
+            self.msal_app.remove_account(account)
 
-        accounts = self._msal_app.get_accounts(user)
+        accounts = self.msal_app.get_accounts(user)
         logger.info('After account removal:')
         logger.info(json.dumps(accounts))
 
@@ -322,25 +327,25 @@ class Identity:  # pylint: disable=too-many-instance-attributes
 
     def logout_all(self):
         # TODO: Support multi-authority logout
-        accounts = self._msal_app.get_accounts()
+        accounts = self.msal_app.get_accounts()
         logger.info('Before account removal:')
         logger.info(json.dumps(accounts))
 
         for account in accounts:
-            self._msal_app.remove_account(account)
+            self.msal_app.remove_account(account)
 
-        accounts = self._msal_app.get_accounts()
+        accounts = self.msal_app.get_accounts()
         logger.info('After account removal:')
         logger.info(json.dumps(accounts))
         # remove service principal secrets
         self._msal_secret_store.remove_all_cached_creds()
 
     def get_user(self, user=None):
-        accounts = self._msal_app.get_accounts(user) if user else self._msal_app.get_accounts()
+        accounts = self.msal_app.get_accounts(user) if user else self.msal_app.get_accounts()
         return accounts
 
     def get_user_credential(self, username):
-        accounts = self._msal_app.get_accounts(username)
+        accounts = self.msal_app.get_accounts(username)
 
         # TODO: Confirm with MSAL team that username can uniquely identify the account
         if not accounts:
