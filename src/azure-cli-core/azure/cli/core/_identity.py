@@ -92,14 +92,15 @@ class Identity:  # pylint: disable=too-many-instance-attributes
 
         # Make MSAL remove existing accounts on successful login.
         # self._credential_kwargs['remove_existing_account'] = True
-        from azure.cli.core.msal_patch import patch_token_cache_add
-        patch_token_cache_add(self.msal_app.remove_account)
+        # from azure.cli.core._msal_patch import patch_token_cache_add
+        # patch_token_cache_add(self.msal_app.remove_account)
 
     def _load_msal_cache(self):
         # sdk/identity/azure-identity/azure/identity/_internal/msal_credentials.py:95
         from azure.identity._persistent_cache import _load_persistent_cache
         # Store for user token persistence
         cache = _load_persistent_cache(self._cache_persistence_options)
+        cache._reload_if_necessary()  # pylint: disable=protected-access
         return cache
 
     def _build_persistent_msal_app(self, authority):

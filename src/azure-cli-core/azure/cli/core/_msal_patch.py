@@ -15,13 +15,16 @@ Otherwise, MSAL will return revoked access tokens, resulting in 401 failure
 which can't be handled by commands that don't support silent reauth.
 """
 
+# pylint: skip-file
+# flake8: noqa
+
 import json
 import time
 
-import msal
 from knack.log import get_logger
-from msal.token_cache import decode_id_token, canonicalize, decode_part
+
 from msal.oauth2cli.oauth2 import Client
+from msal.token_cache import decode_id_token, canonicalize, decode_part
 
 logger = get_logger(__name__)
 

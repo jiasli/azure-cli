@@ -5,12 +5,12 @@
 
 from typing import Tuple, List
 
+import json
 import requests
 from azure.cli.core._identity import resource_to_scopes
-from azure.cli.core.azclierror import AuthenticationError
 from azure.cli.core.util import in_cloud_console
 from azure.core.credentials import AccessToken
-from azure.identity import CredentialUnavailableError
+from azure.identity import CredentialUnavailableError, AuthenticationRequiredError
 
 from knack.log import get_logger
 from knack.util import CLIError
@@ -45,20 +45,22 @@ class CredentialAdaptor:
             token = self._credential.get_token(*scopes, **kwargs)
             if self._external_credentials:
                 external_tenant_tokens = [cred.get_token(*scopes) for cred in self._external_credentials]
+            return token, external_tenant_tokens
         except CLIError as err:
             if in_cloud_console():
                 CredentialAdaptor._log_hostname()
             raise err
-        except CredentialUnavailableError as err:
-            import json
+        except AuthenticationRequiredError as err:
             err_dict = json.loads(err.response.text())
-            aad_error_handler(err_dict, err.claims)
+            aad_error_handler(err_dict, scopes=err.scopes, claims=err.claims)
+        except CredentialUnavailableError as err:
+            err_dict = json.loads(err.response.text())
+            aad_error_handler(err_dict)
         except requests.exceptions.SSLError as err:
             from .util import SSLERROR_TEMPLATE
             raise CLIError(SSLERROR_TEMPLATE.format(str(err)))
         except requests.exceptions.ConnectionError as err:
             raise CLIError('Please ensure you have network connection. Error detail: ' + str(err))
-        return token, external_tenant_tokens
 
     def signed_session(self, session=None):
         logger.debug("CredentialAdaptor.get_token")
@@ -110,18 +112,18 @@ def _normalize_scopes(scopes):
     return scopes
 
 
-def _generate_login_command(claims=None):
+def _generate_login_command(scopes=None, claims=None):
     login_command = ['az login']
 
-    # Temporarily disable passing claims back to `az login`.
-    claims = None
+    if scopes:
+        login_command.append('--scope {}'.format(' '.join(scopes)))
 
     if claims:
         import base64
         try:
             base64.urlsafe_b64decode(claims)
             is_base64 = True
-        except ValueError as ex:
+        except ValueError:
             is_base64 = False
 
         if not is_base64:
@@ -131,14 +133,15 @@ def _generate_login_command(claims=None):
     return ' '.join(login_command)
 
 
-def aad_error_handler(error, claims=None, scopes=None):
+def aad_error_handler(error, scopes=None, claims=None):
     """ Handle the error from AAD server returned by ADAL or MSAL. """
 
     # https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-aadsts-error-codes
     # Search for an error code at https://login.microsoftonline.com/error
     msg = error.get('error_description')
 
-    login_command = _generate_login_command(claims=claims)
+    # login_command = _generate_login_command(claims=claims)
+    login_command = 'az logout\naz login'
     login_instruction = 'run:\n{}'.format(login_command)
 
     login_message = ("To re-authenticate, please {}\nIf the problem persists, "

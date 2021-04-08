@@ -536,24 +536,24 @@ class Profile:
             adal_cache = AdalCredentialCache()
             adal_cache.remove_cached_creds(user_or_sp)
 
-            logger.warning('Account %s has been logged out from Azure CLI.', user_or_sp)
+            logger.warning("Account '%s' has been logged out from Azure CLI.", user_or_sp)
         else:
             # https://english.stackexchange.com/questions/5302/log-in-to-or-log-into-or-login-to
-            logger.warning("Account %s was not logged in to Azure CLI.", user_or_sp)
+            logger.warning("Account '%s' was not logged in to Azure CLI.", user_or_sp)
 
         # Log out from MSAL cache
         identity = Identity(self._authority)
         accounts = identity.get_user(user_or_sp)
         if accounts:
-            logger.info("The credential of %s were found from MSAL encrypted cache.", user_or_sp)
+            logger.info("The credential of '%s' were found from MSAL encrypted cache.", user_or_sp)
             if clear_credential:
                 identity.logout_user(user_or_sp)
-                logger.warning("The credential of %s were cleared from MSAL encrypted cache. This account is "
+                logger.warning("The credential of '%s' were cleared from MSAL encrypted cache. This account is "
                                "also logged out from other SDK tools which use Azure CLI's credential "
                                "via Single Sign-On.", user_or_sp)
             else:
-                logger.warning('The credential of %s is still stored in MSAL encrypted cached. Other SDK tools may use '
-                               'Azure CLI\'s credential via Single Sign-On. '
+                logger.warning("The credential of '%s' is still stored in MSAL encrypted cached. Other SDK tools may "
+                               "use Azure CLI\'s credential via Single Sign-On. "
                                'To clear the credential, run `az logout --username %s --clear-credential`.',
                                user_or_sp, user_or_sp)
         else:
