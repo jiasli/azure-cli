@@ -1607,7 +1607,6 @@ class TestProfile(unittest.TestCase):
         self.assertEqual(self.id2.split('/')[-1], result[1]['id'])
         self.assertTrue(result[0]['isDefault'])
 
-   # @unittest.skip("TODO")
     @mock.patch('azure.identity.UsernamePasswordCredential.get_token', autospec=True)
     @mock.patch('azure.identity.ClientSecretCredential.get_token', autospec=True)
     @mock.patch('azure.cli.core._identity.MsalSecretStore.retrieve_secret_of_service_principal', autospec=True)
