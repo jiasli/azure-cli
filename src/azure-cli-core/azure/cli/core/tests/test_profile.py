@@ -384,7 +384,7 @@ class TestProfile(unittest.TestCase):
         self.assertEqual(output, subs)
 
     @mock.patch('azure.cli.core._profile.SubscriptionFinder._get_subscription_client_class', autospec=True)
-    @mock.patch.dict('os.environ',clear=True)
+    @mock.patch.dict('os.environ', clear=True)
     def test_login_with_environment_credential_service_principal(self, get_client_class_mock):
         os.environ['AZURE_TENANT_ID'] = self.service_principal_tenant_id
         os.environ['AZURE_CLIENT_ID'] = self.service_principal_id
