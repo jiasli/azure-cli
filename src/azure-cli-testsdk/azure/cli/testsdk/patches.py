@@ -2,6 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
+import sys
 
 from azure_devtools.scenario_tests import mock_in_unit_test
 from azure_devtools.scenario_tests.const import MOCKED_SUBSCRIPTION_ID, MOCKED_TENANT_ID
@@ -34,6 +35,9 @@ def patch_main_exception_handler(unit_test):
 
         raise CliExecutionError(ex)
 
+    import traceback
+    traceback.print_stack()
+    print(traceback.format_stack(), file=sys.stderr)
     mock_in_unit_test(unit_test, 'azure.cli.core.util.handle_exception', _handle_main_exception)
 
 
