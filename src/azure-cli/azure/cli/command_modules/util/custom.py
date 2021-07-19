@@ -264,6 +264,25 @@ def demo_style(cmd, theme=None):  # pylint: disable=unused-argument
     ]
     print_styled_text(styled_text)
 
+    # TRY
+    command_placeholder = '{:40s}'
+    try_commands = [
+        (Style.PRIMARY, 'TRY\n'),
+        (Style.PRIMARY, command_placeholder.format('az upgrade')),
+        (Style.SECONDARY, 'Upgrade to the latest CLI version in tool\n'),
+        (Style.PRIMARY, command_placeholder.format('az account set -s <sub_id or sub_name>')),
+        (Style.SECONDARY, 'Set your default subscription account\n'),
+        (Style.PRIMARY, command_placeholder.format('az config set output=table')),
+        (Style.SECONDARY, 'Set your default output to be in table format\n'),
+        (Style.PRIMARY, command_placeholder.format('az feedback')),
+        (Style.SECONDARY, 'File us your latest issue encountered\n'),
+        (Style.PRIMARY, command_placeholder.format('az next')),
+        (Style.SECONDARY, 'Get some ideas on next steps\n'),
+        (Style.PRIMARY, command_placeholder.format('az init')),
+        (Style.SECONDARY, 'Select configuration bundles for interactive or automation scenarios\n'),
+    ]
+    print_styled_text(try_commands)
+
     print_styled_text("[logs]\n")
 
     # Print logs
