@@ -118,7 +118,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         # For AAD, use port 0 to let the system choose arbitrary unused ephemeral port to avoid port collision
         # on port 8400 from the old design. However, ADFS only allows port 8400.
         result = self.msal_app.acquire_token_interactive(
-            scopes, prompt='select_account', port=8400 if self._is_adfs else None,
+            scopes, prompt='select_account', port=8400,
             success_template=success_template, error_template=error_template, **kwargs)
         return check_result(result)
 
