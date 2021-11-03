@@ -23,7 +23,7 @@ jobs:
     displayName: Azure CLI
     inputs:
       azureSubscription: service-connection-test1
-      scriptType: ps
+      scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
         ls
