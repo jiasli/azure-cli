@@ -26,7 +26,7 @@ jobs:
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
-        set -x
+        set -vx
         ls ~/.azure
         cat ~/.azure/versionCheck.json
         cat ~/.azure/accessTokens.json
@@ -36,4 +36,4 @@ jobs:
         cat $AZURE_CONFIG_DIR/versionCheck.json
         cat $AZURE_CONFIG_DIR/accessTokens.json
 
-        az account show --sdk-auth
+        az group list
