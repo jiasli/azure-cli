@@ -27,6 +27,7 @@ jobs:
       scriptLocation: inlineScript
       inlineScript: |
         set -vx
+
         ls ~/.azure
         cat ~/.azure/versionCheck.json
         cat ~/.azure/accessTokens.json
