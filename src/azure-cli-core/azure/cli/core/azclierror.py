@@ -75,6 +75,7 @@ class AzCLIError(CLIError):
             for recommendation in self.recommendations:
                 print(recommendation, file=sys.stderr)
 
+        self.aladdin_recommendation_callback()
         if self.aladdin_recommendations:
             print('\nExamples from AI knowledge base:', file=sys.stderr)
             for recommendation, description in self.aladdin_recommendations:

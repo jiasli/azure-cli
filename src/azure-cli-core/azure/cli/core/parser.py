@@ -317,23 +317,26 @@ class AzCliCommandParser(CLICommandParser):
                 az_error = InvalidArgumentValueError(error_msg)
                 candidates = difflib.get_close_matches(value, action.choices, cutoff=0.7)
 
-            command_arguments = self._get_failure_recovery_arguments(action)
             if candidates:
                 az_error.set_recommendation("Did you mean '{}' ?".format(candidates[0]))
 
-            # recommend a command for user
-            recommender = CommandRecommender(*command_arguments, error_msg, cli_ctx)
-            recommender.set_help_examples(self.get_examples(command_name_inferred))
-            recommendations = recommender.provide_recommendations()
-            if recommendations:
-                az_error.set_aladdin_recommendation(recommendations)
+            def get_aladdin_recommendation():
+                command_arguments = self._get_failure_recovery_arguments(action)
 
-            # remind user to check extensions if we can not find a command to recommend
-            if isinstance(az_error, CommandNotFoundError) \
-                    and not az_error.recommendations and self.prog == 'az' \
-                    and use_dynamic_install == 'no':
-                az_error.set_recommendation(EXTENSION_REFERENCE)
+                # recommend a command for user
+                recommender = CommandRecommender(*command_arguments, error_msg, cli_ctx)
+                recommender.set_help_examples(self.get_examples(command_name_inferred))
+                recommendations = recommender.provide_recommendations()
+                if recommendations:
+                    az_error.set_aladdin_recommendation(recommendations)
 
+                # remind user to check extensions if we can not find a command to recommend
+                if isinstance(az_error, CommandNotFoundError) \
+                        and not az_error.recommendations and self.prog == 'az' \
+                        and use_dynamic_install == 'no':
+                    az_error.set_recommendation(EXTENSION_REFERENCE)
+
+            az_error.aladdin_recommendation_callback = get_aladdin_recommendation
             az_error.print_error()
             az_error.send_telemetry()
 
