@@ -21,6 +21,9 @@ from .util import check_result
 
 AZURE_CLI_CLIENT_ID = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
 
+AZURE_CLIENT_SECRET = "AZURE_CLIENT_SECRET"
+AZURE_CLIENT_CERTIFICATE_PATH = "AZURE_CLIENT_CERTIFICATE_PATH"
+
 
 logger = get_logger(__name__)
 
@@ -72,22 +75,29 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         # because MSAL apps can have different tenant IDs.
         self._msal_app_instance = None
 
-    @property
-    def _msal_app_kwargs(self):
-        """kwargs for creating UserCredential or ServicePrincipalCredential.
+    def _prepare_msal_app_kwargs(self, use_token_cache=True, use_http_cache=True):
+        """Prepare kwargs for creating UserCredential or ServicePrincipalCredential.
         MSAL token cache and HTTP cache are lazily created.
+
+        :param use_token_cache: Whether persisted token cache should be used.
+        :param use_http_cache: Whether persisted http cache should be used.
+        :return: kwargs
         """
-        if not Identity._msal_token_cache:
-            Identity._msal_token_cache = self._load_msal_token_cache()
-
-        if not Identity._msal_http_cache:
-            Identity._msal_http_cache = self._load_msal_http_cache()
-
-        return {
-            "authority": self._msal_authority,
-            "token_cache": Identity._msal_token_cache,
-            "http_cache": Identity._msal_http_cache
+        kwargs = {
+            "authority": self._msal_authority
         }
+
+        if use_token_cache:
+            if not Identity._msal_token_cache:
+                Identity._msal_token_cache = self._load_msal_token_cache()
+            kwargs["token_cache"] = Identity._msal_token_cache
+
+        if use_http_cache:
+            if not Identity._msal_http_cache:
+                Identity._msal_http_cache = self._load_msal_http_cache()
+            kwargs["http_cache"] = Identity._msal_http_cache
+
+        return kwargs
 
     @property
     def _msal_app(self):
@@ -95,7 +105,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         The instance is lazily created.
         """
         if not self._msal_app_instance:
-            self._msal_app_instance = PublicClientApplication(self.client_id, **self._msal_app_kwargs)
+            self._msal_app_instance = PublicClientApplication(self.client_id, **self._prepare_msal_app_kwargs())
         return self._msal_app_instance
 
     def _load_msal_token_cache(self):
@@ -169,7 +179,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         sp_auth = ServicePrincipalAuth.build_from_credential(self.tenant_id, client_id, credential)
 
         # This cred means SDK credential object
-        cred = ServicePrincipalCredential(sp_auth, **self._msal_app_kwargs)
+        cred = ServicePrincipalCredential(sp_auth, **self._prepare_msal_app_kwargs())
         result = cred.acquire_token_for_client(scopes)
         check_result(result)
 
@@ -206,12 +216,39 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         return accounts
 
     def get_user_credential(self, username):
-        return UserCredential(self.client_id, username, **self._msal_app_kwargs)
+        logger.debug("Identity.get_user_credential: username=%r", username)
+        return UserCredential(self.client_id, username, **self._prepare_msal_app_kwargs())
 
     def get_service_principal_credential(self, client_id):
+        logger.debug("Identity.get_service_principal_credential: client_id=%r", client_id)
         entry = self._service_principal_store.load_entry(client_id, self.tenant_id)
         sp_auth = ServicePrincipalAuth(entry)
-        return ServicePrincipalCredential(sp_auth, **self._msal_app_kwargs)
+        return ServicePrincipalCredential(sp_auth, **self._prepare_msal_app_kwargs())
+
+    def get_environment_credential(self, client_id):
+        """Get an environment credential.
+        Currently only client secret and certificate are supported. SN+I cert and client assertion is not supported.
+
+        No token cache is persisted to hard drive.
+        """
+        logger.debug("Identity.get_environment_credential: client_id=%r", client_id)
+
+        # Logic borrowed from azure.identity._credentials.environment.EnvironmentCredential
+        cred = None
+
+        # Build credential
+        for key in (AZURE_CLIENT_SECRET, AZURE_CLIENT_CERTIFICATE_PATH):
+            if os.environ.get(key):
+                cred = ServicePrincipalAuth.build_credential(os.environ[key])
+
+        if not cred:
+            raise CLIError("Incomplete environment credential, specify either "
+                           f"{AZURE_CLIENT_SECRET} or "
+                           f"{AZURE_CLIENT_CERTIFICATE_PATH}.")
+
+        sp_auth = ServicePrincipalAuth.build_from_credential(self.tenant_id, client_id, cred)
+
+        return ServicePrincipalCredential(sp_auth, **self._prepare_msal_app_kwargs(use_token_cache=False))
 
     def get_service_principal_entry(self, client_id):
         """This method is only used by --sdk-auth. DO NOT use it elsewhere."""

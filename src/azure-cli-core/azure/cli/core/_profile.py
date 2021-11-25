@@ -54,6 +54,11 @@ _ASSIGNED_IDENTITY_INFO = 'assignedIdentityInfo'
 
 _AZ_LOGIN_MESSAGE = "Please run 'az login' to setup account."
 
+AZURE_SUBSCRIPTION_ID = "AZURE_SUBSCRIPTION_ID"
+AZURE_CLIENT_ID = "AZURE_CLIENT_ID"
+AZURE_TENANT_ID = "AZURE_TENANT_ID"
+_IS_ENVIRONMENT_CREDENTIAL = 'isEnvironmentCredential'
+
 
 def load_subscriptions(cli_ctx, all_clouds=False, refresh=False):
     profile = Profile(cli_ctx=cli_ctx)
@@ -526,6 +531,31 @@ class Profile:
         self._storage[_SUBSCRIPTIONS] = subscriptions
 
     def load_cached_subscriptions(self, all_clouds=False):
+        # Environment account takes higher precedence.
+        if AZURE_SUBSCRIPTION_ID in os.environ:
+            client_id = os.environ.get(AZURE_CLIENT_ID)
+            tenant_id = os.environ.get(AZURE_TENANT_ID)
+
+            env_var_unset_message = f"{AZURE_SUBSCRIPTION_ID} is set indicating environment credential, " \
+                                    "but {} is not set."
+            if not client_id:
+                raise CLIError(env_var_unset_message.format(AZURE_CLIENT_ID))
+            if not tenant_id:
+                raise CLIError(env_var_unset_message.format(AZURE_TENANT_ID))
+
+            env_account = {
+                _SUBSCRIPTION_ID: os.environ[AZURE_SUBSCRIPTION_ID],
+                _TENANT_ID: os.environ[AZURE_TENANT_ID],
+                _IS_DEFAULT_SUBSCRIPTION: True,
+                _STATE: "Enabled",
+                _USER: {
+                  _USER_NAME: os.environ[AZURE_CLIENT_ID],
+                  _USER_TYPE: _SERVICE_PRINCIPAL,
+                  _IS_ENVIRONMENT_CREDENTIAL: True
+                }
+            }
+            return [env_account]
+
         subscriptions = self._storage.get(_SUBSCRIPTIONS) or []
         active_cloud = self.cli_ctx.cloud
         cached_subscriptions = [sub for sub in subscriptions
@@ -594,6 +624,9 @@ class Profile:
 
         # Service Principal
         if user_type == _SERVICE_PRINCIPAL:
+            if account[_USER_ENTITY][_IS_ENVIRONMENT_CREDENTIAL]:
+                return identity.get_environment_credential(username_or_sp_id)
+
             return identity.get_service_principal_credential(username_or_sp_id)
 
         raise NotImplementedError
