@@ -1518,6 +1518,14 @@ def create_service_principal_for_rbac(
             "Please copy %s to a safe place. When you run 'az login', provide the file path in the --password argument",
             cert_file)
         result['fileWithCertAndPrivateKey'] = cert_file
+
+    # Just to help us log in with this service principal, so that we don't need to manually build the
+    # `az login` command string.
+    # I don't use logger.warning because I want to make this feature hidden for now and make the terminal less crowded.
+    # The best place for it is of course post-output hint.
+    logger.info("To log in with this service principal, run:\n"
+                'az login --service-principal --username %s --password %s --tenant %s',
+                result['appId'], result['password'] or result['fileWithCertAndPrivateKey'], result['tenant'])
     return result
 
 
