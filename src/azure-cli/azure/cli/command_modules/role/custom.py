@@ -871,7 +871,7 @@ def create_application(cmd, client, display_name, identifier_uris=None,
                        credential_description=None,
                        # web
                        web_home_page_url=None, web_redirect_uris=None,
-                       implicit_grant_id_token_issuance=None, implicit_grant_access_token_issuance=None,
+                       enable_id_token_issuance=None, enable_access_token_issuance=None,
                        # publicClient
                        public_client_redirect_uris=None,
                        # JSON properties
@@ -899,8 +899,8 @@ def create_application(cmd, client, display_name, identifier_uris=None,
                 credential_description=credential_description,
                 # web
                 web_home_page_url=web_home_page_url, web_redirect_uris=web_redirect_uris,
-                implicit_grant_id_token_issuance=implicit_grant_id_token_issuance,
-                implicit_grant_access_token_issuance=implicit_grant_access_token_issuance,
+                enable_id_token_issuance=enable_id_token_issuance,
+                enable_access_token_token_issuance=enable_access_token_issuance,
                 # publicClient
                 public_client_redirect_uris=public_client_redirect_uris,
                 # JSON properties
@@ -930,8 +930,8 @@ def create_application(cmd, client, display_name, identifier_uris=None,
         key_credentials=key_credentials,
         # web
         web_home_page_url=web_home_page_url, web_redirect_uris=web_redirect_uris,
-        implicit_grant_id_token_issuance=implicit_grant_id_token_issuance,
-        implicit_grant_access_token_issuance=implicit_grant_access_token_issuance,
+        enable_id_token_issuance=enable_id_token_issuance,
+        enable_access_token_token_issuance=enable_access_token_issuance,
         # publicClient
         public_client_redirect_uris=public_client_redirect_uris,
         # JSON properties
@@ -956,7 +956,7 @@ def update_application(instance, display_name=None, identifier_uris=None,
                        credential_description=None,
                        # web
                        web_home_page_url=None, web_redirect_uris=None,
-                       implicit_grant_id_token_issuance=None, implicit_grant_access_token_issuance=None,
+                       enable_id_token_issuance=None, enable_access_token_token_issuance=None,
                        # publicClient
                        public_client_redirect_uris=None,
                        # JSON properties
@@ -980,8 +980,8 @@ def update_application(instance, display_name=None, identifier_uris=None,
         key_credentials=key_credentials,
         # web
         web_home_page_url=web_home_page_url, web_redirect_uris=web_redirect_uris,
-        implicit_grant_id_token_issuance=implicit_grant_id_token_issuance,
-        implicit_grant_access_token_issuance=implicit_grant_access_token_issuance,
+        enable_id_token_issuance=enable_id_token_issuance,
+        enable_access_token_token_issuance=enable_access_token_token_issuance,
         # publicClient
         public_client_redirect_uris=public_client_redirect_uris,
         # JSON properties
@@ -1816,7 +1816,7 @@ def _set_application_properties(
         key_credentials=None,
         # web
         web_home_page_url=None, web_redirect_uris=None,
-        implicit_grant_id_token_issuance=None, implicit_grant_access_token_issuance=None,
+        enable_id_token_issuance=None, enable_access_token_token_issuance=None,
         # publicClient
         public_client_redirect_uris=None,
         # JSON properties
@@ -1831,13 +1831,13 @@ def _set_application_properties(
     if is_fallback_public_client is not None:
         body['isFallbackPublicClient'] = is_fallback_public_client
 
-    if implicit_grant_id_token_issuance is not None:
+    if enable_id_token_issuance is not None:
         body.setdefault('web', {}).setdefault('implicitGrantSettings', {})['enableIdTokenIssuance'] = \
-            implicit_grant_id_token_issuance
+            enable_id_token_issuance
 
-    if implicit_grant_access_token_issuance is not None:
+    if enable_access_token_token_issuance is not None:
         body.setdefault('web', {}).setdefault('implicitGrantSettings', {})['enableAccessTokenIssuance'] = \
-            implicit_grant_access_token_issuance
+            enable_access_token_token_issuance
 
     # list properties
     if web_redirect_uris is not None:

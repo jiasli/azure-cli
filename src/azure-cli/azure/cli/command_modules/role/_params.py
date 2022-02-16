@@ -57,11 +57,11 @@ def load_arguments(self, _):
                    help='Space-separated values. '
                         'Specifies the URLs where user tokens are sent for sign-in, or the redirect URIs '
                         'where OAuth 2.0 authorization codes and access tokens are sent.')
-        c.argument('implicit_grant_id_token_issuance', arg_group='web',
+        c.argument('enable_id_token_issuance', arg_group='web',
                    arg_type=get_three_state_flag(),
                    help='Specifies whether this web application can request an ID token using the OAuth 2.0 '
                         'implicit flow.')
-        c.argument('implicit_grant_access_token_issuance', arg_group='web',
+        c.argument('enable_access_token_issuance', arg_group='web',
                    arg_type=get_three_state_flag(),
                    help='Specifies whether this web application can request an access token using the OAuth 2.0 '
                         'implicit flow.')
