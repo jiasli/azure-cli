@@ -347,7 +347,7 @@ class Profile:
                 str(account[_SUBSCRIPTION_ID]),
                 str(account[_TENANT_ID]))
 
-    def get_raw_token(self, resource=None, scopes=None, subscription=None, tenant=None):
+    def get_raw_token(self, resource=None, scopes=None, subscription=None, tenant=None, return_sdk_token=False):
         # Convert resource to scopes
         if resource and not scopes:
             from .auth.util import resource_to_scopes
@@ -365,16 +365,16 @@ class Profile:
         identity_type, identity_id = Profile._try_parse_msi_account_name(account)
         if identity_type:
             # managed identity
-            if tenant:
-                raise CLIError("Tenant shouldn't be specified for managed identity account")
+            if tenant != account[_TENANT_ID]:
+                raise CLIError("Getting access for another tenant is not supported for managed identity account")
             from .auth.util import scopes_to_resource
             msi_creds = MsiAccountTypes.msi_auth_factory(identity_type, identity_id,
                                                          scopes_to_resource(scopes))
             sdk_token = msi_creds.get_token(*scopes)
         elif in_cloud_console() and account[_USER_ENTITY].get(_CLOUD_SHELL_ID):
             # Cloud Shell, which is just a system-assigned managed identity.
-            if tenant:
-                raise CLIError("Tenant shouldn't be specified for Cloud Shell account")
+            if tenant != account[_TENANT_ID]:
+                raise CLIError("Getting access for another tenant is not supported for Cloud Shell account")
             from .auth.util import scopes_to_resource
             msi_creds = MsiAccountTypes.msi_auth_factory(MsiAccountTypes.system_assigned, identity_id,
                                                          scopes_to_resource(scopes))
@@ -382,6 +382,11 @@ class Profile:
         else:
             credential = self._create_credential(account, tenant)
             sdk_token = credential.get_token(*scopes)
+
+        if return_sdk_token:
+            return sdk_token
+
+        # Convert sdk_token for backward compatibility and wrap it with account information.
 
         # Convert epoch int 'expires_on' to datetime string 'expiresOn' for backward compatibility
         # WARNING: expiresOn is deprecated and will be removed in future release.
