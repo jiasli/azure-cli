@@ -9,10 +9,9 @@ from collections import OrderedDict
 from azure.cli.core.profiles import PROFILE_TYPE
 from azure.cli.core.commands import CliCommandType
 
-from ._client_factory import (_auth_client_factory, _graph_client_factory,
-                              _msi_user_identities_operations, _msi_operations_operations)
+from ._client_factory import _auth_client_factory, _graph_client_factory
 
-from ._validators import process_msi_namespace, process_assignment_namespace, validate_change_password
+from ._validators import process_assignment_namespace, validate_change_password
 
 
 def transform_definition_list(result):
@@ -99,11 +98,6 @@ def get_graph_client(cli_ctx, _):
 
 # pylint: disable=line-too-long, too-many-statements
 def load_command_table(self, _):
-
-    identity_sdk = CliCommandType(
-        operations_tmpl='azure.mgmt.msi.operations#UserAssignedIdentitiesOperations.{}',
-        client_factory=_msi_user_identities_operations
-    )
 
     role_custom = CliCommandType(operations_tmpl='azure.cli.command_modules.role.custom#{}')
 
@@ -193,10 +187,3 @@ def load_command_table(self, _):
         g.custom_command('add', 'add_group_member')
         g.custom_command('remove', 'remove_group_member')
         g.custom_command('check', 'check_group_membership')
-
-    with self.command_group('identity', identity_sdk, min_api='2017-12-01') as g:
-        g.command('create', 'create_or_update', validator=process_msi_namespace)
-        g.show_command('show', 'get')
-        g.command('delete', 'delete')
-        g.custom_command('list', 'list_user_assigned_identities')
-        g.command('list-operations', 'list', operations_tmpl='azure.mgmt.msi.operations.operations#Operations.{}', client_factory=_msi_operations_operations)
