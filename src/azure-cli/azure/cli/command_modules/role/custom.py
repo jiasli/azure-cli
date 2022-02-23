@@ -658,7 +658,7 @@ def remove_application_owner(client, owner_object_id, identifier):
 
 def list_sps(cmd, client, spn=None, display_name=None, query_filter=None, show_mine=None, include_all=None):
     if show_mine:
-        return list_owned_objects(client.signed_in_user, 'servicePrincipal')
+        return list_owned_objects(client, '#microsoft.graph.servicePrincipal')
 
     sub_filters = []
     if query_filter:
@@ -683,7 +683,7 @@ def list_sps(cmd, client, spn=None, display_name=None, query_filter=None, show_m
 def list_owned_objects(client, object_type=None):
     result = client.owned_objects_list()
     if object_type:
-        result = [r for r in result if r.get('@odata.type') and r.get('@odata.type').lower() == object_type.lower()]
+        result = [r for r in result if r.get('@odata.type') and _match_odata_type(r.get('@odata.type'), object_type)]
     return result
 
 
@@ -2034,3 +2034,15 @@ def _delete_credential(graph_object, remove_password_func, patch_function, key_i
             "keyId": key_id
         }
         remove_password_func(graph_object[ID], body)
+
+
+def _match_odata_type(odata_type, user_input):
+    """Compare the @odata.type property of the object with the user's input.
+    For example, a service principal object has
+      "@odata.type": "#microsoft.graph.servicePrincipal"
+    """
+    odata_type = odata_type.lower()
+    user_input = user_input.lower()
+    # Full match "#microsoft.graph.servicePrincipal" == "#microsoft.graph.servicePrincipal"
+    # Partial match "#microsoft.graph.servicePrincipal" ~= "servicePrincipal"
+    return odata_type == user_input or odata_type.split('.')[-1] == user_input
