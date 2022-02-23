@@ -335,7 +335,7 @@ class CreateForRbacScenarioTest(ScenarioTest):
             self.cmd('ad app list --app-id {app_id}',
                      checks=self.check('length([*])', 1))
 
-            result = self.cmd('role assignment list --assignee {app_id}').get_output_in_json()
+            result = self.cmd('role assignment list --assignee {app_id} --all').get_output_in_json()
 
             # No role assignment
             self.assertFalse(result)
@@ -353,21 +353,23 @@ class CreateForRbacScenarioTest(ScenarioTest):
             self.kwargs['app_id'] = result['appId']
 
             result = self.cmd('ad sp list --spn {app_id}', checks=self.check('length([*])', 1)).get_output_in_json()
-            object_id = result[0]['id']
+            sp_oid = result[0]['id']
 
             self.cmd('ad app list --app-id {app_id}',
                      checks=self.check('length([*])', 1))
 
-            result = self.cmd('role assignment list --assignee {app_id}').get_output_in_json()
+            result = self.cmd('role assignment list --assignee {app_id} --all').get_output_in_json()
             assert len(result) == 1
-            assert object_id == result[0]['principalId']
+            assert sp_oid == result[0]['principalId']
 
             self.cmd('role assignment delete --assignee {app_id}')
 
-            result = self.cmd('role assignment list --assignee {app_id}').get_output_in_json()
+            result = self.cmd('role assignment list --assignee {app_id} --all').get_output_in_json()
             assert not result
 
             self.cmd('ad app delete --id {app_id}')
+
+            # Both application and service principal should now be deleted.
             self.cmd('ad sp list --spn {app_id}',
                      checks=self.check('length([])', 0))
             self.cmd('ad app list --app-id {app_id}',
@@ -375,7 +377,7 @@ class CreateForRbacScenarioTest(ScenarioTest):
 
     @AllowLargeResponse()
     def test_create_for_rbac_idempotent(self):
-        self.kwargs['display_name'] = self.create_random_name(prefix='azure-cli-', length=14)
+        self.kwargs['display_name'] = self.create_random_name(prefix='cli-graph', length=14)
 
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             try:
@@ -387,10 +389,16 @@ class CreateForRbacScenarioTest(ScenarioTest):
                 result = self.cmd('ad app list --app-id {app_id}').get_output_in_json()
                 self.assertEqual(1, len(result))
 
+                result = self.cmd('ad app list --display-name {display_name}').get_output_in_json()
+                self.assertEqual(1, len(result))
+
                 result = self.cmd('ad sp list --spn {app_id}').get_output_in_json()
                 self.assertEqual(1, len(result))
 
-                result = self.cmd('role assignment list --assignee {app_id}').get_output_in_json()
+                result = self.cmd('ad sp list --display-name {display_name}').get_output_in_json()
+                self.assertEqual(1, len(result))
+
+                result = self.cmd('role assignment list --assignee {app_id} --all').get_output_in_json()
                 self.assertEqual(1, len(result))
             finally:
                 try:

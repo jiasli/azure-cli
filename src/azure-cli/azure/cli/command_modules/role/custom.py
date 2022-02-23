@@ -31,11 +31,6 @@ from azure.graphrbac.models import GraphErrorException
 
 from azure.cli.core.util import get_file_json, shell_safe_json_parse, is_guid
 
-from azure.graphrbac.models import (ApplicationCreateParameters, ApplicationUpdateParameters, AppRole,
-                                    PasswordCredential, KeyCredential, UserCreateParameters, PasswordProfile,
-                                    ServicePrincipalCreateParameters, RequiredResourceAccess, ResourceAccess,
-                                    GroupCreateParameters, CheckGroupMembershipParameters, UserUpdateParameters,
-                                    OptionalClaim, OptionalClaims)
 
 from ._client_factory import _auth_client_factory, _graph_client_factory
 from ._multi_api_adaptor import MultiAPIAdaptor
@@ -538,6 +533,8 @@ def _search_role_assignments(cli_ctx, assignments_client, definitions_client,
     if assignee:
         assignee_object_id = _resolve_object_id(cli_ctx, assignee, fallback_to_object_id=True)
 
+    # https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-list-rest
+    # "atScope()" and "principalId eq '{value}'" query cannot be used together (API limitation).
     # always use "scope" if provided, so we can get assignments beyond subscription e.g. management groups
     if scope:
         f = 'atScope()'
@@ -1392,8 +1389,8 @@ def create_service_principal_for_rbac(
                                          start_date=app_start_date,
                                          end_date=app_end_date)
     app_id = aad_application['appId']
-    logger.warning("Created application: appId=%s, id=%s, displayName=%s",
-                   app_id, aad_application[ID], aad_application['displayName'])
+    # logger.warning("Created application: appId=%s, id=%s, displayName=%s",
+    #                app_id, aad_application[ID], aad_application['displayName'])
 
     # For existing applications, delete all passwords first.
     for cred in aad_application['passwordCredentials']:
@@ -1428,9 +1425,8 @@ def create_service_principal_for_rbac(
                         app_id, ex.response.headers
                         if hasattr(ex, 'response') else ex)  # pylint: disable=no-member
                     raise
-    sp_app_id = aad_sp['appId']
     sp_oid = aad_sp[ID]
-    logger.warning("Created service principal: appId=%s, id=%s", sp_app_id, sp_oid)
+    # logger.warning("Created service principal: appId=%s, id=%s", aad_sp['appId'], sp_oid)
 
     if role:
         for scope in scopes:
