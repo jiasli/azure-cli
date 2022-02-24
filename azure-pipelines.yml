@@ -13,9 +13,7 @@ pr:
       - '*'
 
 jobs:
-- job: TestAzureCLITask
-  displayName: Test Azure CLI Task
-
+- job: TestAzureCLITaskUbuntu
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -26,4 +24,16 @@ jobs:
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
-        python3 -c "print('汉字')
+        python3 -c "import sys; print(sys.stdout.encoding); print('汉字')"
+- job: TestAzureCLITaskWindows
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - task: AzureCLI@2
+    displayName: Azure CLI
+    inputs:
+      azureSubscription: service-connection-test1
+      scriptType: batch
+      scriptLocation: inlineScript
+      inlineScript: |
+        "C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\python.exe" -c "import sys; print(sys.stdout.encoding); print('汉字')"
