@@ -17,13 +17,13 @@ jobs:
   displayName: Test Azure CLI Task
 
   pool:
-    vmImage: 'windows-latest'
+    vmImage: 'ubuntu-latest'
   steps:
   - task: AzureCLI@2
     displayName: Azure CLI
     inputs:
       azureSubscription: service-connection-test1
-      scriptType: batch
+      scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
-        "C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\python.exe" -c "print('汉字')
+        python3 -c "print('汉字')
