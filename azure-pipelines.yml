@@ -23,8 +23,7 @@ jobs:
     displayName: Azure CLI
     inputs:
       azureSubscription: service-connection-test1
-      scriptType: bash
+      scriptType: batch
       scriptLocation: inlineScript
       inlineScript: |
-        set -vx
-        az group list --debug
+        "C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\python.exe" -c "print('汉字')
