@@ -35,6 +35,7 @@ from azure.cli.core.util import get_file_json, shell_safe_json_parse, is_guid
 from ._client_factory import _auth_client_factory, _graph_client_factory
 from ._multi_api_adaptor import MultiAPIAdaptor
 from ._graph_client import GraphClient
+from ._graph_objects import application_property_map, set_object_properties
 
 # ARM RBAC's principalType
 USER = 'User'
@@ -1795,27 +1796,6 @@ def _application_add_password(client, app, start_datetime, end_datetime, display
     return result
 
 
-argument_to_property = {
-    # base properties
-    'display_name': 'displayName',
-    'identifier_uris': 'identifierUris',
-    'is_fallback_public_client': 'isFallbackPublicClient',
-    'sign_in_audience': 'signInAudience',
-    'key_credentials': 'keyCredentials',
-    # web
-    'web_home_page_url': ['web', 'homePageUrl'],
-    'web_redirect_uris': ['web', 'redirectUris'],
-    'enable_id_token_issuance': ['web', 'implicitGrantSettings', 'enableIdTokenIssuance'],
-    'enable_access_token_issuance': ['web', 'implicitGrantSettings', 'enableAccessTokenIssuance'],
-    # publicClient
-    'public_client_redirect_uris': ['publicClient', 'redirectUris'],
-    # JSON properties
-    'app_roles': 'appRoles',
-    'optional_claims': 'optionalClaims',
-    'required_resource_accesses': 'requiredResourceAccess',
-}
-
-
 def _set_application_properties(body, **kwargs):
 
     # Preprocess JSON properties
@@ -1826,18 +1806,7 @@ def _set_application_properties(body, **kwargs):
     if kwargs.get('required_resource_accesses'):
         kwargs['required_resource_accesses'] = _build_required_resource_accesses(kwargs['required_resource_accesses'])
 
-    for arg, value in kwargs.items():
-        if value is not None:
-            property_path = argument_to_property[arg]
-            # If property path is a list, such as web/implicitGrantSettings/enableIdTokenIssuance,
-            # create intermediate sub-objects if not present
-            if isinstance(property_path, list):
-                sub_object = body
-                for property_name in property_path[0:-1]:
-                    sub_object = sub_object.setdefault(property_name, {})
-                sub_object[property_path[-1]] = value
-            else:
-                body[property_path] = value
+    set_object_properties(application_property_map, body, **kwargs)
 
 
 def _datetime_to_utc(dt):

@@ -209,6 +209,10 @@ lBMWCjI8gO6W8YQMu7AH""".replace('\n', '')
 class ApplicationScenarioTest(ScenarioTest):
 
     def test_application_scenario(self):
+        """
+        - Test creating application with its properties.
+        - Test creating application first and update its properties.
+        """
         display_name = self.create_random_name(prefix='azure-cli-test', length=30)
 
         # identifierUris must be on verified domain
@@ -313,6 +317,29 @@ class ApplicationScenarioTest(ScenarioTest):
         self.cmd('ad app delete --id {app_id}')
         self.cmd('ad app show --id {app_id}', expect_failure=True)
 
+    def test_app_resolution(self):
+        """Test application can be resolved with identifierUris, appId, or id."""
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
+        self.kwargs.update({
+            'display_name': display_name,
+            'identifier_uri': f'api://{display_name}'
+        })
+
+        app = self.cmd('ad app create --display-name {display_name} '
+                       '--identifier-uris {identifier_uri}').get_output_in_json()
+
+        self.kwargs['app_id'] = app['appId']
+        self.kwargs['id'] = app['id']
+
+        # Show with appId
+        self.cmd('ad app show --id {app_id}', checks=[self.check('displayName', '{display_name}')])
+        # Show with id
+        self.cmd('ad app show --id {id}', checks=[self.check('displayName', '{display_name}')])
+        # Show with identifierUris
+        self.cmd('ad app show --id {identifier_uri}', checks=[self.check('displayName', '{display_name}')])
+
+        self.cmd('ad app delete --id {app_id}')
+
     def test_app_credential_scenario(self):
         display_name = self.create_random_name(prefix='azure-cli-test', length=30)
         self.kwargs.update({
@@ -392,60 +419,48 @@ class ApplicationScenarioTest(ScenarioTest):
             self.assertEqual(self.cmd('ad app show --id non-exist-identifierUris').exit_code, 3)
             self.assertEqual(self.cmd('ad app show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
-    def test_application_optional_claims(self):
-        try:
-            # Create with optionalClaims
-            name1 = self.create_random_name(prefix='cli-app-', length=14)
-            self.kwargs.update({
-                'name1': name1,
-                'optional_claims': json.dumps({
-                    "idToken": [
-                        {
-                            "name": "auth_time",
-                            "source": None,
-                            "essential": False
-                        }
-                    ],
-                    "accessToken": [
-                        {
-                            "name": "email",
-                            "source": None,
-                            "essential": False
-                        }
-                    ]
-                })
-            })
 
-            app_id1 = self.cmd("ad app create --display-name {name1} --optional-claims '{optional_claims}'",
-                               checks=[
-                                   self.check('displayName', '{name1}'),
-                                   self.check('length(optionalClaims.idToken)', 1),
-                                   self.check('length(optionalClaims.accessToken)', 1)
-                               ]).get_output_in_json()['appId']
+class ServicePrincipalScenarioTest(ScenarioTest):
 
-            # Create with no optionalClaims, then update with optionalClaims
-            name2 = self.create_random_name(prefix='cli-app-', length=14)
-            self.kwargs.update({
-                "name2": name2
-            })
-            app_id2 = self.cmd('ad app create --display-name {name2}').get_output_in_json()['appId']
-            self.kwargs.update({
-                'app_id': app_id2
-            })
+    def test_service_principal_scenario(self):
+        """
+        - Test service principal creation.
+        - Test service principal can be resolved with servicePrincipalNames (appId and identifierUris) or id.
+        """
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
 
-            self.cmd("ad app update --id {app_id} --optional-claims '{optional_claims}'")
-            self.cmd('ad app show --id {app_id}',
-                     checks=[
-                         self.check('displayName', '{name2}'),
-                         self.check('length(optionalClaims.idToken)', 1),
-                         self.check('length(optionalClaims.accessToken)', 1)
-                     ])
-        finally:
-            try:
-                self.cmd("ad app delete --id " + app_id1)
-                self.cmd("ad app delete --id " + app_id2)
-            except:
-                pass
+        self.kwargs.update({
+            'display_name': display_name,
+            'identifier_uri': f'api://{display_name}'
+        })
+
+        # Create
+        app = self.cmd('ad app create --display-name {display_name} '
+                       '--identifier-uris {identifier_uri}').get_output_in_json()
+
+        self.kwargs['app_id'] = app['appId']
+
+        sp = self.cmd('ad sp create --id {app_id}',
+                      checks=[
+                          self.check('appId', app['appId']),
+                          self.check('appDisplayName', app['displayName']),
+                          self.check('servicePrincipalNames[0]', '{app_id}')
+                      ]).get_output_in_json()
+
+        self.kwargs['id'] = sp['id']
+
+        # Show with appId as one of servicePrincipalNames
+        self.cmd('ad sp show --id {app_id}')
+        # Show with identifierUri as one of servicePrincipalNames
+        self.cmd('ad sp show --id {identifier_uri}')
+        # Show with id
+        self.cmd('ad sp show --id {id}')
+
+        self.cmd('ad sp delete --id {app_id}')
+        self.cmd('ad app delete --id {app_id}')
+
+        self.cmd('ad sp show --id {app_id}', expect_failure=True)
+        self.cmd('ad app show --id {app_id}', expect_failure=True)
 
 
 class CreateForRbacScenarioTest(ScenarioTest):
