@@ -1001,17 +1001,18 @@ def delete_application(client, identifier):
 
 def _resolve_application(client, identifier):
     """Resolve an application and return its id."""
-    result = client.application_list(filter="identifierUris/any(s:s eq '{}')".format(identifier))
-    if not result:
-        if is_guid(identifier):
-            # it is either app id or object id, let us verify
-            result = client.application_list(filter="appId eq '{}'".format(identifier))
-        else:
-            error = CLIError("Application '{}' doesn't exist".format(identifier))
+    if is_guid(identifier):
+        # it is either app id or object id, let us verify
+        result = client.application_list(filter="appId eq '{}'".format(identifier))
+        # If not found, this looks like an object id
+        return result[0][ID] if result else identifier
+    else:
+        result = client.application_list(filter="identifierUris/any(s:s eq '{}')".format(identifier))
+        if not result:
+            error = CLIError("Application with identifier URI '{}' doesn't exist".format(identifier))
             error.status_code = 404  # Make sure CLI returns 3
             raise error
-
-    return result[0][ID] if result else identifier
+        return result[0][ID]
 
 
 def reset_application_credential(cmd, client, identifier, create_cert=False, cert=None, years=None,
