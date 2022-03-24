@@ -132,12 +132,14 @@ popd
 :: Remove __pycache__
 echo remove pycache
 for /d /r %BUILDING_DIR%\Lib\site-packages\pip %%d in (__pycache__) do (
+    echo deleting %%d
     if exist %%d rmdir /s /q "%%d"
 )
 
 :: Remove aio
 echo remove aio
 for /d /r %BUILDING_DIR%\Lib\site-packages\azure\mgmt %%d in (aio) do (
+    echo deleting %%d
     if exist %%d rmdir /s /q "%%d"
 )
 
@@ -165,6 +167,7 @@ if exist "%PROPAGATE_ENV_CHANGE_DIR%\propagate_env_change.exe" (
     popd
 )
 
+dir /s /b
 echo Building MSI...
 msbuild /t:rebuild /p:Configuration=Release %REPO_ROOT%\build_scripts\windows\azure-cli.wixproj
 
