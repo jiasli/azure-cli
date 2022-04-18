@@ -1047,30 +1047,9 @@ def _get_grant_permissions(client, client_sp_object_id=None, query_filter=None):
 
 
 def list_permissions(cmd, identifier):
-    # the important and hard part is to tell users which permissions have been granted.
-    # we will due diligence to dig out what matters
-
     graph_client = _graph_client_factory(cmd.cli_ctx)
-
-    # first get the permission grant history
-    client_sp_object_id = _resolve_service_principal(graph_client.service_principals, identifier)
-
-    # get original permissions required by the application, we will cross check the history
-    # and mark out granted ones
-    graph_client = _graph_client_factory(cmd.cli_ctx)
-    application = show_application(graph_client.applications, identifier)
-    permissions = application.required_resource_access
-    if permissions:
-        grant_permissions = _get_grant_permissions(graph_client, client_sp_object_id=client_sp_object_id)
-    for p in permissions:
-        result = list(graph_client.service_principals.list(
-            filter="servicePrincipalNames/any(c:c eq '{}')".format(p.resource_app_id)))
-        expiry_time = 'N/A'
-        if result:
-            expiry_time = ', '.join([x.expiry_time for x in grant_permissions if
-                                     x.resource_id == result[0].object_id])
-        setattr(p, 'expiryTime', expiry_time)
-    return permissions
+    application = show_application(graph_client, identifier)
+    return application['requiredResourceAccess']
 
 
 def add_permission(client, identifier, api, api_permissions):
