@@ -878,32 +878,67 @@ class GraphAppCredsScenarioTest(ScenarioTest):
 
 class GraphAppRequiredAccessScenarioTest(ScenarioTest):
 
+    @AllowLargeResponse()
     def test_graph_required_access_e2e(self):
         if not get_signed_in_user(self):
             return  # this test delete users which are beyond a SP's capacity, so quit...
         self.kwargs = {
             'display_name': self.create_random_name('cli-app-', 15),
-            'graph_resource': '00000002-0000-0000-c000-000000000000',
-            'target_api': 'a42657d6-7f20-40e3-b6f0-cee03008a62a',
-            'target_api2': '311a71cc-e848-46a1-bdf8-97ff7156d8e6'
+            'microsoft_graph_api': '00000003-0000-0000-c000-000000000000',
+            'microsoft_graph_permission_value1': 'Directory.Read.All',  # Delegated permission
+            'microsoft_graph_permission_value2': 'Application.Read.All',  # Delegated permission
+            # 'microsoft_graph_permission_value3': 'Application.ReadWrite.OwnedBy'  # Application permission
         }
+
+        # Look up for permission IDs
+        graph_sp = self.cmd('ad sp show --id {microsoft_graph_api}').get_output_in_json()
+        self.kwargs['microsoft_graph_sp_id'] = graph_sp['id']
+        self.kwargs['microsoft_graph_permission1'] = _get_id_from_value(
+            graph_sp['oauth2PermissionScopes'], self.kwargs['microsoft_graph_permission_value1'])
+        self.kwargs['microsoft_graph_permission2'] = _get_id_from_value(
+            graph_sp['oauth2PermissionScopes'], self.kwargs['microsoft_graph_permission_value2'])
+
+        # self.kwargs['microsoft_graph_permission3'] = _get_id_from_value(
+        #     graph_sp['appRoles'], self.kwargs['microsoft_graph_permission_value2'])
+
         app_id = None
         try:
-            result = self.cmd('ad sp create-for-rbac --name {display_name} --skip-assignment').get_output_in_json()
+            result = self.cmd('ad sp create-for-rbac --name {display_name}').get_output_in_json()
             self.kwargs['app_id'] = result['appId']
             app_id = result['appId']
-            self.cmd('ad app permission add --id {app_id} --api {graph_resource} --api-permissions {target_api}=Scope')
-            self.cmd('ad app permission grant --id {app_id} --api {graph_resource}')
+            self.cmd('ad app permission add --id {app_id} '
+                     '--api {microsoft_graph_api} --api-permissions {microsoft_graph_permission1}=Scope')
+
+            # Add permissions
             permissions = self.cmd('ad app permission list --id {app_id}', checks=[
                 self.check('length([*])', 1)
             ]).get_output_in_json()
-            self.assertTrue(dateutil.parser.parse(permissions[0]['expiryTime']))  # verify it is a time
-            self.cmd('ad app permission list-grants --id {app_id}', checks=self.check('length([*])', 1))
-            self.cmd('ad app permission list-grants --id {app_id} --show-resource-name',
-                     checks=self.check('[0].resourceDisplayName', "Windows Azure Active Directory"))
-            self.cmd('ad app permission add --id {app_id} --api {graph_resource} --api-permissions {target_api2}=Scope')
-            self.cmd('ad app permission grant --id {app_id} --api {graph_resource}')
-            self.cmd('ad app permission delete --id {app_id} --api {graph_resource}')
+            assert permissions[0]['resourceAppId'] == '00000003-0000-0000-c000-000000000000'
+            assert permissions[0]['resourceAccess'][0]['id'] == self.kwargs['microsoft_graph_permission1']
+            assert permissions[0]['resourceAccess'][0]['type'] == 'Scope'
+
+            # Grant permissions
+            self.cmd('ad app permission grant --id {app_id} --api {microsoft_graph_api} '
+                     '--scope {microsoft_graph_permission_value1}')
+            grants = self.cmd('ad app permission list-grants --id {app_id} --show-resource-name').get_output_in_json()
+            assert len(grants) == 1
+            assert grants[0]['resourceId'] == self.kwargs['microsoft_graph_sp_id']
+            assert grants[0]['resourceDisplayName'] == "Microsoft Graph"
+            assert grants[0]['scope'] == self.kwargs['microsoft_graph_permission_value1']
+
+            # Add a second permission
+            self.cmd('ad app permission add --id {app_id} '
+                     '--api {microsoft_graph_api} --api-permissions {microsoft_graph_permission2}=Scope')
+
+            # Grant permissions
+            self.cmd('ad app permission grant --id {app_id} --api {microsoft_graph_api} '
+                     '--scope {microsoft_graph_permission_value1} {microsoft_graph_permission_value2}')
+            grants = self.cmd('ad app permission list-grants --id {app_id} --show-resource-name').get_output_in_json()
+            assert len(grants) == 1
+            assert grants[0]['scope'] == (self.kwargs['microsoft_graph_permission_value1'] + " " +
+                                          self.kwargs['microsoft_graph_permission_value2'])
+
+            self.cmd('ad app permission delete --id {app_id} --api {microsoft_graph_api}')
             self.cmd('ad app permission list --id {app_id}', checks=self.check('length([*])', 0))
         finally:
             if app_id:
@@ -928,16 +963,16 @@ class GraphAppRequiredAccessScenarioTest(ScenarioTest):
         # Look up for permission IDs
         graph_sp = self.cmd('ad sp show --id {microsoft_graph_api}').get_output_in_json()
         # Delegated permission Directory.AccessAsUser.All
-        self.kwargs['microsoft_graph_permission1'] = next(
-            s['id'] for s in graph_sp['oauth2PermissionScopes'] if s['value'] == 'Application.Read.All')
+        self.kwargs['microsoft_graph_permission1'] = _get_id_from_value(
+            graph_sp['oauth2PermissionScopes'], 'Application.Read.All')
         # Application permission Application.ReadWrite.OwnedBy
-        self.kwargs['microsoft_graph_permission2'] = next(
-            s['id'] for s in graph_sp['appRoles'] if s['value'] == 'Application.ReadWrite.OwnedBy')
+        self.kwargs['microsoft_graph_permission2'] = _get_id_from_value(
+            graph_sp['appRoles'], 'Application.ReadWrite.OwnedBy')
 
         arm_sp = self.cmd('ad sp show --id {azure_service_management_api}').get_output_in_json()
         # Delegated permission user_impersonation
-        self.kwargs['azure_service_management_permission'] = next(
-            s['id'] for s in arm_sp['oauth2PermissionScopes'] if s['value'] == 'user_impersonation')
+        self.kwargs['azure_service_management_permission'] = _get_id_from_value(
+            arm_sp['oauth2PermissionScopes'],'user_impersonation')
 
         app_id = None
         try:
@@ -1074,3 +1109,9 @@ class GraphAppRequiredAccessScenarioTest(ScenarioTest):
                     self.cmd('ad app delete --id ' + app_id)
                 except:
                     pass
+
+
+def _get_id_from_value(permissions, value):
+    """Get id from value for appRoles or oauth2PermissionScopes."""
+    # https://docs.microsoft.com/en-us/graph/api/resources/serviceprincipal?view=graph-rest-1.0#properties
+    return next(p['id'] for p in permissions if p['value'] == value)

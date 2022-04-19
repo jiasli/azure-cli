@@ -1141,8 +1141,7 @@ def admin_consent(cmd, client, identifier):
     send_raw_request(cmd.cli_ctx, 'post', url, resource='74658136-14ec-4630-ad9b-26e160ff0fc6')
 
 
-def grant_application(cmd, client, identifier, api, consent_type=None, principal_id=None, scope=None):
-    scope = scope or ['user_impersonation']
+def grant_application(cmd, client, identifier, api, scope, consent_type=None, principal_id=None):
     # Get the Service Principal ObjectId for the client app
     client_sp_object_id = _resolve_service_principal(client, identifier)
 
@@ -1175,7 +1174,6 @@ def list_permission_grants(client, identifier=None, query_filter=None, show_reso
     if identifier:
         client_sp_object_id = _resolve_service_principal(client, identifier)
     result = _get_grant_permissions(client, client_sp_object_id=client_sp_object_id, query_filter=query_filter)
-    result = list(result)
     if show_resource_name:
         for r in result:
             sp = client.service_principal_get(r['resourceId'])
