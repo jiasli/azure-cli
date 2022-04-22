@@ -1711,6 +1711,7 @@ def _get_object_stubs(graph_client, assignees):
 
 
 def _get_owner_url(client, owner_object_id):
+    # The owner object should be in the form of https://graph.microsoft.com/v1.0/directoryObjects/{id}
     if '://' in owner_object_id:
         return owner_object_id
     return "{base_url}/directoryObjects/{id}".format(base_url=client.base_url, id=owner_object_id)

@@ -419,6 +419,30 @@ class ApplicationScenarioTest(ScenarioTest):
             self.assertEqual(self.cmd('ad app show --id non-exist-identifierUris').exit_code, 3)
             self.assertEqual(self.cmd('ad app show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
+    def test_app_owner(self):
+        owner = get_signed_in_user(self)
+        if not owner:
+            return  # this test deletes users which are beyond a SP's capacity, so quit.
+
+        self.kwargs = {
+            'owner': owner,
+            'display_name': self.create_random_name('azure-cli-test', 30)
+        }
+        self.recording_processors.append(AADGraphUserReplacer(owner, 'example@example.com'))
+        try:
+            self.kwargs['owner_object_id'] = self.cmd('ad user show --id {owner}').get_output_in_json()['id']
+            self.kwargs['app_id'] = self.cmd('ad app create --display-name {display_name}').get_output_in_json()['appId']
+            self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')
+            self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')  # test idempotence
+            self.cmd('ad app owner list --id {app_id}', checks=self.check('[0].userPrincipalName', owner))
+            self.cmd('ad app owner remove --owner-object-id {owner_object_id} --id {app_id}')
+            self.cmd('ad app owner list --id {app_id}', checks=self.check('length([*])', 0))
+        finally:
+            try:
+                self.cmd('ad app delete --id {app_id}')
+            except:
+                pass
+
 
 class ServicePrincipalScenarioTest(ScenarioTest):
 
@@ -438,29 +462,55 @@ class ServicePrincipalScenarioTest(ScenarioTest):
         app = self.cmd('ad app create --display-name {display_name} '
                        '--identifier-uris {identifier_uri}').get_output_in_json()
 
-        self.kwargs['app_id'] = app['appId']
+        try:
+            self.kwargs['app_id'] = app['appId']
 
-        sp = self.cmd('ad sp create --id {app_id}',
-                      checks=[
-                          self.check('appId', app['appId']),
-                          self.check('appDisplayName', app['displayName']),
-                          self.check('servicePrincipalNames[0]', '{app_id}')
-                      ]).get_output_in_json()
+            sp = self.cmd('ad sp create --id {app_id}',
+                          checks=[
+                              self.check('appId', app['appId']),
+                              self.check('appDisplayName', app['displayName']),
+                              self.check('servicePrincipalNames[0]', '{app_id}')
+                          ]).get_output_in_json()
 
-        self.kwargs['id'] = sp['id']
+            self.kwargs['id'] = sp['id']
 
-        # Show with appId as one of servicePrincipalNames
-        self.cmd('ad sp show --id {app_id}')
-        # Show with identifierUri as one of servicePrincipalNames
-        self.cmd('ad sp show --id {identifier_uri}')
-        # Show with id
-        self.cmd('ad sp show --id {id}')
+            # Show with appId as one of servicePrincipalNames
+            self.cmd('ad sp show --id {app_id}')
+            # Show with identifierUri as one of servicePrincipalNames
+            self.cmd('ad sp show --id {identifier_uri}')
+            # Show with id
+            self.cmd('ad sp show --id {id}')
 
-        self.cmd('ad sp delete --id {app_id}')
-        self.cmd('ad app delete --id {app_id}')
+            self.cmd('ad sp delete --id {app_id}')
+            self.cmd('ad app delete --id {app_id}')
 
-        self.cmd('ad sp show --id {app_id}', expect_failure=True)
-        self.cmd('ad app show --id {app_id}', expect_failure=True)
+            self.cmd('ad sp show --id {app_id}', expect_failure=True)
+            self.cmd('ad app show --id {app_id}', expect_failure=True)
+        finally:
+            try:
+                self.cmd('ad app delete --id {app_id}')
+            except:
+                pass
+
+    def test_sp_owner(self):
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
+
+        self.kwargs.update({
+            'display_name': display_name,
+            'identifier_uri': f'api://{display_name}'
+        })
+        app = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        try:
+            self.kwargs['app_id'] = app['appId']
+            self.cmd('ad sp create --id {app_id}').get_output_in_json()
+
+            # We don't support create, remove yet
+            self.cmd('ad sp owner list --id {app_id}', checks=self.check('length(@)', 0))
+        finally:
+            try:
+                self.cmd('ad app delete --id {app_id}')
+            except:
+                pass
 
 
 class CreateForRbacScenarioTest(ScenarioTest):
@@ -785,33 +835,6 @@ def get_signed_in_user(test_case):
     return None
 
 
-class GraphOwnerScenarioTest(ScenarioTest):
-
-    def test_graph_application_ownership(self):
-        owner = get_signed_in_user(self)
-        if not owner:
-            return  # this test delete users which are beyond a SP's capacity, so quit...
-
-        self.kwargs = {
-            'owner': owner,
-            'display_name': self.create_random_name('sp', 15)
-        }
-        self.recording_processors.append(AADGraphUserReplacer(owner, 'example@example.com'))
-        try:
-            self.kwargs['owner_object_id'] = self.cmd('ad user show --id {owner}').get_output_in_json()['id']
-            self.kwargs['app_id'] = self.cmd('ad sp create-for-rbac -n {display_name}').get_output_in_json()['appId']
-            self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')
-            self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')  # test idempotence
-            self.cmd('ad app owner list --id {app_id}', checks=self.check('[0].userPrincipalName', owner))
-            self.cmd('ad app owner remove --owner-object-id {owner_object_id} --id {app_id}')
-            self.cmd('ad app owner list --id {app_id}', checks=self.check('length([*])', 0))
-        finally:
-            try:
-                self.cmd('ad sp delete --id {app_id}')
-            except:
-                pass
-
-
 class GraphAppCredsScenarioTest(ScenarioTest):
     def test_graph_app_cred_e2e(self):
         if not get_signed_in_user(self):
@@ -876,10 +899,10 @@ class GraphAppCredsScenarioTest(ScenarioTest):
                 self.cmd('ad app delete --id {app_id2}')
 
 
-class GraphAppRequiredAccessScenarioTest(ScenarioTest):
+class AppPermissionTest(ScenarioTest):
 
     @AllowLargeResponse()
-    def test_graph_required_access_e2e(self):
+    def test_app_permission_e2e(self):
         if not get_signed_in_user(self):
             return  # this test delete users which are beyond a SP's capacity, so quit...
         self.kwargs = {
