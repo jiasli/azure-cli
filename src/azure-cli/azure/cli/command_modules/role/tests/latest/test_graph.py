@@ -68,6 +68,17 @@ TEST_OPTIONAL_CLAIMS = '''{
 }'''
 
 
+class AppScenarioTestBase(ScenarioTest):
+    def tearDown(self):
+        # If self.kwargs contains appId, try best to delete the app.
+        for k, v in self.kwargs.items():
+            if k.startswith('app_id'):
+                try:
+                    self.cmd("ad app delete --id " + v)
+                except:
+                    pass
+
+
 class ServicePrincipalExpressCreateScenarioTest(ScenarioTest):
 
     @AllowLargeResponse(8192)
@@ -206,7 +217,7 @@ lBMWCjI8gO6W8YQMu7AH""".replace('\n', '')
             self.assertEqual(self.cmd('ad sp show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
 
-class ApplicationScenarioTest(ScenarioTest):
+class ApplicationScenarioTest(AppScenarioTestBase):
 
     def test_application_scenario(self):
         """
@@ -259,8 +270,7 @@ class ApplicationScenarioTest(ScenarioTest):
                 self.check('length(optionalClaims)', 3)
             ]).get_output_in_json()
 
-        app_id = result['appId']
-        self.kwargs['app_id'] = app_id
+        self.kwargs['app_id'] = result['appId']
         self.cmd('ad app delete --id {app_id}')
         self.cmd('ad app show --id {app_id}', expect_failure=True)
 
@@ -276,9 +286,9 @@ class ApplicationScenarioTest(ScenarioTest):
         # Graph cannot create app with same identifierUris even after deleting the previous one. Still confirming with
         # service team.
         result = self.cmd('ad app create --display-name {display_name_2}').get_output_in_json()
-        app_id = result['appId']
-        self.kwargs['app_id'] = app_id
-
+        self.kwargs['app_id'] = result['appId']
+        import time
+        time.sleep(20)
         self.cmd(
             'ad app update --id {app_id} --display-name {display_name_3} '
             '--identifier-uris {identifier_uri_3} '
@@ -353,66 +363,59 @@ class ApplicationScenarioTest(ScenarioTest):
         assert app_id == result['appId']
 
         self.kwargs['app_id'] = app_id
+        # show by identifierUri
+        self.cmd('ad app show --id {identifier_uri}', checks=self.check('identifierUris[0]', '{identifier_uri}'))
+        # show by appId
+        self.cmd('ad app show --id {app_id}', checks=self.check('appId', '{app_id}'))
 
-        try:
-            # show by identifierUri
-            self.cmd('ad app show --id {identifier_uri}', checks=self.check('identifierUris[0]', '{identifier_uri}'))
-            # show by appId
-            self.cmd('ad app show --id {app_id}', checks=self.check('appId', '{app_id}'))
+        self.cmd('ad app list --display-name {display_name}', checks=[
+            self.check('[0].identifierUris[0]', '{identifier_uri}'),
+            self.check('length([*])', 1)
+        ])
 
-            self.cmd('ad app list --display-name {display_name}', checks=[
-                self.check('[0].identifierUris[0]', '{identifier_uri}'),
-                self.check('length([*])', 1)
-            ])
+        # update app
+        self.kwargs['redirect_uri'] = "https://azureclitest-redirect-uri"
+        self.kwargs['reply_uri2'] = "https://azureclitest-redirect-uri2"
+        self.cmd('ad app update --id {app_id} --web-redirect-uris {redirect_uri}')
+        self.cmd('ad app show --id {app_id}',
+                 checks=self.check('web.redirectUris[0]', '{redirect_uri}'))
 
-            # update app
-            self.kwargs['redirect_uri'] = "https://azureclitest-redirect-uri"
-            self.kwargs['reply_uri2'] = "https://azureclitest-redirect-uri2"
-            self.cmd('ad app update --id {app_id} --web-redirect-uris {redirect_uri}')
-            self.cmd('ad app show --id {app_id}',
-                     checks=self.check('web.redirectUris[0]', '{redirect_uri}'))
+        # add and remove replyUrl
+        # self.cmd('ad app update --id {app} --add replyUrls {reply_uri2}')
+        # self.cmd('ad app show --id {app}', checks=self.check('length(replyUrls)', 2))
+        # self.cmd('ad app update --id {app} --remove replyUrls 1')
+        # self.cmd('ad app show --id {app}', checks=[
+        #     self.check('length(replyUrls)', 1),
+        #     self.check('replyUrls[0]', '{reply_uri2}')
+        # ])
 
-            # add and remove replyUrl
-            # self.cmd('ad app update --id {app} --add replyUrls {reply_uri2}')
-            # self.cmd('ad app show --id {app}', checks=self.check('length(replyUrls)', 2))
-            # self.cmd('ad app update --id {app} --remove replyUrls 1')
-            # self.cmd('ad app show --id {app}', checks=[
-            #     self.check('length(replyUrls)', 1),
-            #     self.check('replyUrls[0]', '{reply_uri2}')
-            # ])
+        # update displayName
+        name2 = self.create_random_name(prefix='azure-cli-test-graph-app-2', length=30)
+        self.kwargs['name2'] = name2
+        self.cmd('ad app update --id {app_id} --display-name {name2}')
+        self.cmd('ad app show --id {app_id}', checks=self.check('displayName', '{name2}'))
 
-            # update displayName
-            name2 = self.create_random_name(prefix='azure-cli-test-graph-app-2', length=30)
-            self.kwargs['name2'] = name2
-            self.cmd('ad app update --id {app_id} --display-name {name2}')
-            self.cmd('ad app show --id {app_id}', checks=self.check('displayName', '{name2}'))
+        # update homepage
+        self.kwargs['homepage2'] = 'http://' + name2
+        self.cmd('ad app update --id {app_id} --web-home-page-url {homepage2}')
+        self.cmd('ad app show --id {app_id}', checks=self.check('web.homePageUrl', '{homepage2}'))
 
-            # update homepage
-            self.kwargs['homepage2'] = 'http://' + name2
-            self.cmd('ad app update --id {app_id} --web-home-page-url {homepage2}')
-            self.cmd('ad app show --id {app_id}', checks=self.check('web.homePageUrl', '{homepage2}'))
+        # invoke generic update
+        # self.cmd('ad app update --id {app} --set oauth2AllowUrlPathMatching=true')
+        # self.cmd('ad app show --id {app}',
+        #          checks=self.check('oauth2AllowUrlPathMatching', True))
 
-            # invoke generic update
-            # self.cmd('ad app update --id {app} --set oauth2AllowUrlPathMatching=true')
-            # self.cmd('ad app show --id {app}',
-            #          checks=self.check('oauth2AllowUrlPathMatching', True))
+        # update app_roles
+        self.cmd("ad app update --id {app_id} --app-roles '{app_roles}'")
+        result = self.cmd('ad app show --id {app_id}', checks=self.check('length(appRoles)', 1))\
+            .get_output_in_json()
+        assert result['appRoles'][0]['displayName'] == 'Approver'
 
-            # update app_roles
-            self.cmd("ad app update --id {app_id} --app-roles '{app_roles}'")
-            result = self.cmd('ad app show --id {app_id}', checks=self.check('length(appRoles)', 1))\
-                .get_output_in_json()
-            assert result['appRoles'][0]['displayName'] == 'Approver'
-
-            # delete app
-            self.cmd('ad app delete --id {app_id}')
-            app_id = None
-            self.cmd('ad app list --identifier-uri {identifier_uri}', checks=self.is_empty())
-            self.cmd('ad app list --app-id {app_id}', checks=self.is_empty())
-        finally:
-            try:
-                self.cmd("ad app delete --id " + app_id)
-            except:
-                pass
+        # delete app
+        self.cmd('ad app delete --id {app_id}')
+        app_id = None
+        self.cmd('ad app list --identifier-uri {identifier_uri}', checks=self.is_empty())
+        self.cmd('ad app list --app-id {app_id}', checks=self.is_empty())
 
     def test_app_show_exit_code(self):
         with self.assertRaises(SystemExit):
@@ -429,22 +432,17 @@ class ApplicationScenarioTest(ScenarioTest):
             'display_name': self.create_random_name('azure-cli-test', 30)
         }
         self.recording_processors.append(AADGraphUserReplacer(owner, 'example@example.com'))
-        try:
-            self.kwargs['owner_object_id'] = self.cmd('ad user show --id {owner}').get_output_in_json()['id']
-            self.kwargs['app_id'] = self.cmd('ad app create --display-name {display_name}').get_output_in_json()['appId']
-            self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')
-            self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')  # test idempotence
-            self.cmd('ad app owner list --id {app_id}', checks=self.check('[0].userPrincipalName', owner))
-            self.cmd('ad app owner remove --owner-object-id {owner_object_id} --id {app_id}')
-            self.cmd('ad app owner list --id {app_id}', checks=self.check('length([*])', 0))
-        finally:
-            try:
-                self.cmd('ad app delete --id {app_id}')
-            except:
-                pass
+
+        self.kwargs['owner_object_id'] = self.cmd('ad user show --id {owner}').get_output_in_json()['id']
+        self.kwargs['app_id'] = self.cmd('ad app create --display-name {display_name}').get_output_in_json()['appId']
+        self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')
+        self.cmd('ad app owner add --owner-object-id {owner_object_id} --id {app_id}')  # test idempotence
+        self.cmd('ad app owner list --id {app_id}', checks=self.check('[0].userPrincipalName', owner))
+        self.cmd('ad app owner remove --owner-object-id {owner_object_id} --id {app_id}')
+        self.cmd('ad app owner list --id {app_id}', checks=self.check('length([*])', 0))
 
 
-class ServicePrincipalScenarioTest(ScenarioTest):
+class ServicePrincipalScenarioTest(AppScenarioTestBase):
 
     def test_service_principal_scenario(self):
         """
@@ -462,35 +460,29 @@ class ServicePrincipalScenarioTest(ScenarioTest):
         app = self.cmd('ad app create --display-name {display_name} '
                        '--identifier-uris {identifier_uri}').get_output_in_json()
 
-        try:
-            self.kwargs['app_id'] = app['appId']
+        self.kwargs['app_id'] = app['appId']
 
-            sp = self.cmd('ad sp create --id {app_id}',
-                          checks=[
-                              self.check('appId', app['appId']),
-                              self.check('appDisplayName', app['displayName']),
-                              self.check('servicePrincipalNames[0]', '{app_id}')
-                          ]).get_output_in_json()
+        sp = self.cmd('ad sp create --id {app_id}',
+                      checks=[
+                          self.check('appId', app['appId']),
+                          self.check('appDisplayName', app['displayName']),
+                          self.check('servicePrincipalNames[0]', '{app_id}')
+                      ]).get_output_in_json()
 
-            self.kwargs['id'] = sp['id']
+        self.kwargs['id'] = sp['id']
 
-            # Show with appId as one of servicePrincipalNames
-            self.cmd('ad sp show --id {app_id}')
-            # Show with identifierUri as one of servicePrincipalNames
-            self.cmd('ad sp show --id {identifier_uri}')
-            # Show with id
-            self.cmd('ad sp show --id {id}')
+        # Show with appId as one of servicePrincipalNames
+        self.cmd('ad sp show --id {app_id}')
+        # Show with identifierUri as one of servicePrincipalNames
+        self.cmd('ad sp show --id {identifier_uri}')
+        # Show with id
+        self.cmd('ad sp show --id {id}')
 
-            self.cmd('ad sp delete --id {app_id}')
-            self.cmd('ad app delete --id {app_id}')
+        self.cmd('ad sp delete --id {app_id}')
+        self.cmd('ad app delete --id {app_id}')
 
-            self.cmd('ad sp show --id {app_id}', expect_failure=True)
-            self.cmd('ad app show --id {app_id}', expect_failure=True)
-        finally:
-            try:
-                self.cmd('ad app delete --id {app_id}')
-            except:
-                pass
+        self.cmd('ad sp show --id {app_id}', expect_failure=True)
+        self.cmd('ad app show --id {app_id}', expect_failure=True)
 
     def test_sp_owner(self):
         display_name = self.create_random_name(prefix='azure-cli-test', length=30)
@@ -500,23 +492,17 @@ class ServicePrincipalScenarioTest(ScenarioTest):
             'identifier_uri': f'api://{display_name}'
         })
         app = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
-        try:
-            self.kwargs['app_id'] = app['appId']
-            self.cmd('ad sp create --id {app_id}').get_output_in_json()
+        self.kwargs['app_id'] = app['appId']
+        self.cmd('ad sp create --id {app_id}').get_output_in_json()
 
-            # We don't support create, remove yet
-            self.cmd('ad sp owner list --id {app_id}', checks=self.check('length(@)', 0))
-        finally:
-            try:
-                self.cmd('ad app delete --id {app_id}')
-            except:
-                pass
+        # We don't support create, remove yet
+        self.cmd('ad sp owner list --id {app_id}', checks=self.check('length(@)', 0))
 
 
 class CreateForRbacScenarioTest(ScenarioTest):
 
     @AllowLargeResponse()
-    def test_create_for_rbac_no_role_assignment(self):
+    def test_create_for_rbac(self):
         # Verify no role assignment is created by default
         self.kwargs['display_name'] = self.create_random_name(prefix='cli-graph', length=14)
 
