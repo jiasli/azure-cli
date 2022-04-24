@@ -1909,6 +1909,8 @@ def _reset_credentials(cmd, graph_object, add_password_func, remove_password_fun
         }
         patch_func(graph_object[ID], body=patch_body)
 
+    # Keep backward compatibility
+    # TODO: Should we return the passwordCredential or keyCredential directly?
     result = {
         'appId': graph_object['appId'],
         # 'keyId': key_id,
