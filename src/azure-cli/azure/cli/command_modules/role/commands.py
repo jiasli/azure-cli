@@ -118,7 +118,7 @@ def load_command_table(self, _):
                             exception_handler=graph_err_handler, transform=transform_graph_objects_with_cred) as g:
         g.custom_command('create', 'create_application')
         g.custom_command('delete', 'delete_application')
-        g.custom_command('list', 'list_apps', table_transformer=get_graph_object_transformer('app'))
+        g.custom_command('list', 'list_applications', table_transformer=get_graph_object_transformer('app'))
         g.custom_show_command('show', 'show_application')
         g.custom_command('permission grant', 'grant_application')
         g.custom_command('permission list', 'list_permissions')
@@ -142,7 +142,7 @@ def load_command_table(self, _):
                             transform=transform_graph_objects_with_cred) as g:
         g.custom_command('create', 'create_service_principal')
         g.custom_command('delete', 'delete_service_principal')
-        g.custom_command('list', 'list_sps', table_transformer=get_graph_object_transformer('sp'))
+        g.custom_command('list', 'list_service_principals', table_transformer=get_graph_object_transformer('sp'))
         g.custom_show_command('show', 'show_service_principal')
         g.generic_update_command('update', getter_name='show_service_principal', getter_type=role_custom,
                                  setter_name='patch_service_principal', setter_type=role_custom)

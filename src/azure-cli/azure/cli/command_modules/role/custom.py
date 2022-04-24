@@ -605,241 +605,6 @@ def _resolve_role_id(role, scope, definitions_client):
     return role_id
 
 
-def list_apps(cmd, client, app_id=None, display_name=None, identifier_uri=None, query_filter=None, include_all=None,
-              show_mine=None):
-    if show_mine:
-        return list_owned_objects(client, '#microsoft.graph.application')
-    sub_filters = []
-    if query_filter:
-        sub_filters.append(query_filter)
-    if app_id:
-        sub_filters.append("appId eq '{}'".format(app_id))
-    if display_name:
-        sub_filters.append("startswith(displayName,'{}')".format(display_name))
-    if identifier_uri:
-        sub_filters.append("identifierUris/any(s:s eq '{}')".format(identifier_uri))
-
-    result = client.application_list(filter=' and '.join(sub_filters) if sub_filters else None)
-    if sub_filters or include_all:
-        return list(result)
-
-    result = list(itertools.islice(result, 101))
-    if len(result) == 101:
-        logger.warning("The result is not complete. You can still use '--all' to get all of them with"
-                       " long latency expected, or provide a filter through command arguments")
-    return result[:100]
-
-
-def list_application_owners(client, identifier):
-    return client.application_owner_list(_resolve_application(client, identifier))
-
-
-def add_application_owner(client, owner_object_id, identifier):
-    app_object_id = _resolve_application(client, identifier)
-    owners = client.application_owner_list(app_object_id)
-    # Graph is not idempotent and fails with:
-    #   One or more added object references already exist for the following modified properties: 'owners'
-    # We make it idempotent.
-    if not next((x for x in owners if x[ID] == owner_object_id), None):
-        owner_url = _get_owner_url(client, owner_object_id)
-        body = {"@odata.id": owner_url}
-        client.application_owner_add(app_object_id, body)
-
-
-def remove_application_owner(client, owner_object_id, identifier):
-    app_object_id = _resolve_application(client, identifier)
-    return client.application_owner_remove(app_object_id, owner_object_id)
-
-
-def list_sps(cmd, client, spn=None, display_name=None, query_filter=None, show_mine=None, include_all=None):
-    if show_mine:
-        return list_owned_objects(client, '#microsoft.graph.servicePrincipal')
-
-    sub_filters = []
-    if query_filter:
-        sub_filters.append(query_filter)
-    if spn:
-        sub_filters.append("servicePrincipalNames/any(c:c eq '{}')".format(spn))
-    if display_name:
-        sub_filters.append("startswith(displayName,'{}')".format(display_name))
-
-    result = client.service_principal_list(filter=' and '.join(sub_filters) if sub_filters else None)
-
-    if sub_filters or include_all:
-        return result
-
-    result = list(itertools.islice(result, 101))
-    if len(result) == 101:
-        logger.warning("The result is not complete. You can still use '--all' to get all of them with"
-                       " long latency expected, or provide a filter through command arguments")
-    return result[:100]
-
-
-def list_owned_objects(client, object_type=None):
-    result = client.owned_objects_list()
-    if object_type:
-        result = [r for r in result if r.get('@odata.type') and _match_odata_type(r.get('@odata.type'), object_type)]
-    return result
-
-
-def list_users(client, upn=None, display_name=None, query_filter=None):
-    sub_filters = []
-    if query_filter:
-        sub_filters.append(query_filter)
-    if upn:
-        sub_filters.append("userPrincipalName eq '{}'".format(upn))
-    if display_name:
-        sub_filters.append("startswith(displayName,'{}')".format(display_name))
-
-    return client.user_list(filter=' and '.join(sub_filters) if sub_filters else None)
-
-
-def _set_user_properties(body, **kwargs):
-    set_object_properties(user_property_map, body, **kwargs)
-
-def create_user(client, user_principal_name, display_name, password,
-                mail_nickname=None, immutable_id=None, force_change_password_next_login=False):
-    '''
-    :param mail_nickname: mail alias. default to user principal name
-    '''
-    mail_nickname = mail_nickname or user_principal_name.split('@')[0]
-    body = {}
-    _set_user_properties(body, user_principal_name=user_principal_name, display_name=display_name, password=password,
-                         mail_nickname=mail_nickname, immutable_id=immutable_id,
-                         force_change_password_next_login=force_change_password_next_login, account_enabled=True)
-    return client.user_create(body)
-
-
-def update_user(client, upn_or_object_id, display_name=None, force_change_password_next_login=None, password=None,
-                account_enabled=None, mail_nickname=None):
-    body = {}
-    _set_user_properties(body, display_name=display_name, password=password, mail_nickname=mail_nickname,
-                         force_change_password_next_login=force_change_password_next_login,
-                         account_enabled=account_enabled)
-    return client.user_patch(id=upn_or_object_id, body=body)
-
-
-def show_user(client, upn_or_object_id):
-    return client.user_get(id=upn_or_object_id)
-
-
-def delete_user(client, upn_or_object_id):
-    client.user_delete(id=upn_or_object_id)
-
-
-def get_user_member_groups(client, upn_or_object_id, security_enabled_only=False):
-    if not is_guid(upn_or_object_id):
-        upn_or_object_id = client.user_get(upn_or_object_id)["id"]
-
-    results = client.user_member_groups_get(id=upn_or_object_id)
-    if security_enabled_only:
-        results = [res for res in results if res["securityEnabled"]]
-    return results
-
-
-def create_group(client, display_name, mail_nickname, force=None, description=None):
-    # workaround to ensure idempotent even AAD graph service doesn't support it
-    if not force:
-        matches = client.group_list(filter="displayName eq '{}' and mailNickname eq '{}'".format(display_name, mail_nickname))
-        if matches:
-            if len(matches) > 1:
-                err = ('There is more than one group with the same display and nick names: "{}". '
-                       'Please delete them first.')
-                raise CLIError(err.format(', '.join([x.object_id for x in matches])))
-            logger.warning('A group with the same display name and mail nickname already exists, returning.')
-            return matches[0]
-
-    body = {}
-    set_object_properties(group_property_map, body, display_name=display_name,
-                          mail_nickname=mail_nickname, description=description,
-                          mail_enabled=False, security_enabled=True)
-
-    return client.group_create(body=body)
-
-
-def list_groups(client, display_name=None, query_filter=None):
-    """List groups in the directory"""
-    sub_filters = []
-    if query_filter:
-        sub_filters.append(query_filter)
-    if display_name:
-        sub_filters.append("startswith(displayName,'{}')".format(display_name))
-    return client.group_list(filter=' and '.join(sub_filters) if sub_filters else None)
-
-
-def get_group(client, object_id):
-    """Get group information from the directory."""
-    return client.group_get(id=object_id)
-
-
-def delete_group(client, object_id):
-    """Delete a group from the directory."""
-    return client.group_delete(id=object_id)
-
-
-def get_member_groups(client, object_id, security_enabled_only):
-    """Get a collection of object IDs of groups of which the specified group is a member."""
-    body = {
-        "securityEnabledOnly": security_enabled_only
-    }
-    return client.directory_object_get_member_groups(id=object_id, body=body)
-
-
-def list_group_owners(client, group_id):
-    return client.group_owner_list(_resolve_group(client, group_id))
-
-
-def add_group_owner(client, owner_object_id, group_id):
-    group_object_id = _resolve_group(client, group_id)
-    owners = client.group_owner_list(group_object_id)
-    if not next((x for x in owners if x['id'] == owner_object_id), None):
-        owner_url = client.base_url + '/users/{id}'.format(id=owner_object_id)
-        body = {
-            "@odata.id": owner_url
-        }
-        return client.group_owner_add(id=group_object_id, body=body)
-
-
-def remove_group_owner(client, owner_object_id, group_id):
-    return client.group_owner_remove(_resolve_group(client, group_id), owner_object_id)
-
-
-def check_group_membership(client, group_id, member_object_id):
-    body = {"groupIds": [group_id]}
-    response = client.directory_object_check_member_groups(id=member_object_id, body=body)
-    return {"value": response is not None and group_id in response}
-
-
-def list_group_members(client, group_id):
-    """Get the members of a group."""
-    return client.group_member_list(id=group_id)
-
-
-def add_group_member(client, group_id, member_object_id):
-    """Add a member to a group."""
-    member_url = client.base_url + '/directoryObjects/{id}'.format(id=member_object_id)
-    body = {
-        "@odata.id": member_url
-    }
-    return client.group_member_add(id=group_id, body=body)
-
-
-def remove_group_member(client, group_id, member_object_id):
-    """Remove a member from a group."""
-    return client.group_member_remove(id=group_id, member_id=member_object_id)
-
-
-def _resolve_group(client, identifier):
-    if not is_guid(identifier):
-        res = list(list_groups(client, display_name=identifier))
-        if not res:
-            raise CLIError('Group {} is not found in Graph '.format(identifier))
-        if len(res) != 1:
-            raise CLIError('More than 1 group objects has the display name of ' + identifier)
-        identifier = res[0].object_id
-    return identifier
-
-
 def create_application(cmd, client, display_name, identifier_uris=None,
                        is_fallback_public_client=None, sign_in_audience=None,
                        # keyCredentials
@@ -855,7 +620,7 @@ def create_application(cmd, client, display_name, identifier_uris=None,
 
     graph_client = _graph_client_factory(cmd.cli_ctx)
     key_credentials, password_creds, required_accesses = None, None, None
-    existing_apps = list_apps(cmd, client, display_name=display_name)
+    existing_apps = list_applications(cmd, client, display_name=display_name)
     if existing_apps:
         if identifier_uris:
             existing_apps = [x for x in existing_apps if set(identifier_uris).issubset(set(x['identifierUris']))]
@@ -976,6 +741,31 @@ def delete_application(client, identifier):
     client.application_delete(id=object_id)
 
 
+def list_applications(cmd, client, app_id=None, display_name=None, identifier_uri=None, query_filter=None,
+                      include_all=None, show_mine=None):
+    if show_mine:
+        return list_owned_objects(client, '#microsoft.graph.application')
+    sub_filters = []
+    if query_filter:
+        sub_filters.append(query_filter)
+    if app_id:
+        sub_filters.append("appId eq '{}'".format(app_id))
+    if display_name:
+        sub_filters.append("startswith(displayName,'{}')".format(display_name))
+    if identifier_uri:
+        sub_filters.append("identifierUris/any(s:s eq '{}')".format(identifier_uri))
+
+    result = client.application_list(filter=' and '.join(sub_filters) if sub_filters else None)
+    if sub_filters or include_all:
+        return list(result)
+
+    result = list(itertools.islice(result, 101))
+    if len(result) == 101:
+        logger.warning("The result is not complete. You can still use '--all' to get all of them with"
+                       " long latency expected, or provide a filter through command arguments")
+    return result[:100]
+
+
 def _resolve_application(client, identifier):
     """Resolve an application and return its id."""
     if is_guid(identifier):
@@ -1005,6 +795,12 @@ def reset_application_credential(cmd, client, identifier, create_cert=False, cer
     return result
 
 
+def delete_application_credential(cmd, client, identifier, key_id, cert=False):
+    sp = show_application(client, identifier)
+    _delete_credential(sp, client.application_password_remove, client.application_patch,
+                       key_id=key_id, cert=cert)
+
+
 def list_application_credentials(cmd, identifier, cert=False):
     # Also see: list_service_principal_credentials
     client = _graph_client_factory(cmd.cli_ctx)
@@ -1015,20 +811,25 @@ def list_application_credentials(cmd, identifier, cert=False):
         return app['passwordCredentials']
 
 
-def delete_application_credential(cmd, client, identifier, key_id, cert=False):
-    sp = show_application(client, identifier)
-    _delete_credential(sp, client.application_password_remove, client.application_patch,
-                       key_id=key_id, cert=cert)
+def add_application_owner(client, owner_object_id, identifier):
+    app_object_id = _resolve_application(client, identifier)
+    owners = client.application_owner_list(app_object_id)
+    # Graph is not idempotent and fails with:
+    #   One or more added object references already exist for the following modified properties: 'owners'
+    # We make it idempotent.
+    if not next((x for x in owners if x[ID] == owner_object_id), None):
+        owner_url = _get_owner_url(client, owner_object_id)
+        body = {"@odata.id": owner_url}
+        client.application_owner_add(app_object_id, body)
 
 
-def create_service_principal(cmd, identifier):
-    return _create_service_principal(cmd.cli_ctx, identifier)
+def remove_application_owner(client, owner_object_id, identifier):
+    app_object_id = _resolve_application(client, identifier)
+    return client.application_owner_remove(app_object_id, owner_object_id)
 
 
-def patch_service_principal(cmd, identifier, parameters):
-    graph_client = _graph_client_factory(cmd.cli_ctx)
-    object_id = _resolve_service_principal(graph_client.service_principals, identifier)
-    return graph_client.service_principals.update(object_id, parameters)
+def list_application_owners(client, identifier):
+    return client.application_owner_list(_resolve_application(client, identifier))
 
 
 def _get_grant_permissions(client, client_sp_object_id=None, query_filter=None):
@@ -1044,12 +845,6 @@ def _get_grant_permissions(client, client_sp_object_id=None, query_filter=None):
                            "for the app. To create one, run `az ad sp create --id {id}`."
                            .format(id=client_sp_object_id))
         raise
-
-
-def list_permissions(cmd, identifier):
-    graph_client = _graph_client_factory(cmd.cli_ctx)
-    application = show_application(graph_client, identifier)
-    return application['requiredResourceAccess']
 
 
 def add_permission(client, identifier, api, api_permissions):
@@ -1128,6 +923,12 @@ def delete_permission(client, identifier, api, api_permissions=None):
     return client.application_patch(application[ID], body)
 
 
+def list_permissions(cmd, identifier):
+    graph_client = _graph_client_factory(cmd.cli_ctx)
+    application = show_application(graph_client, identifier)
+    return application['requiredResourceAccess']
+
+
 def admin_consent(cmd, client, identifier):
     from azure.cli.core.cloud import AZURE_PUBLIC_CLOUD
     from azure.cli.core.util import send_raw_request
@@ -1179,6 +980,16 @@ def list_permission_grants(client, identifier=None, query_filter=None, show_reso
             sp = client.service_principal_get(r['resourceId'])
             r['resourceDisplayName'] = sp['displayName']
     return result
+
+
+def create_service_principal(cmd, identifier):
+    return _create_service_principal(cmd.cli_ctx, identifier)
+
+
+def patch_service_principal(cmd, identifier, parameters):
+    graph_client = _graph_client_factory(cmd.cli_ctx)
+    object_id = _resolve_service_principal(graph_client.service_principals, identifier)
+    return graph_client.service_principals.update(object_id, parameters)
 
 
 def _create_service_principal(cli_ctx, identifier, resolve_app=True):
@@ -1237,6 +1048,31 @@ def delete_service_principal(cmd, identifier):
         client.service_principals.delete(sp_object_id)
 
 
+def list_service_principals(cmd, client, spn=None, display_name=None, query_filter=None, show_mine=None,
+                            include_all=None):
+    if show_mine:
+        return list_owned_objects(client, '#microsoft.graph.servicePrincipal')
+
+    sub_filters = []
+    if query_filter:
+        sub_filters.append(query_filter)
+    if spn:
+        sub_filters.append("servicePrincipalNames/any(c:c eq '{}')".format(spn))
+    if display_name:
+        sub_filters.append("startswith(displayName,'{}')".format(display_name))
+
+    result = client.service_principal_list(filter=' and '.join(sub_filters) if sub_filters else None)
+
+    if sub_filters or include_all:
+        return result
+
+    result = list(itertools.islice(result, 101))
+    if len(result) == 101:
+        logger.warning("The result is not complete. You can still use '--all' to get all of them with"
+                       " long latency expected, or provide a filter through command arguments")
+    return result[:100]
+
+
 def reset_service_principal_credential(cmd, client, identifier, create_cert=False, cert=None, years=None,
                                        end_date=None, keyvault=None, append=False, display_name=None):
     sp = show_service_principal(client, identifier)
@@ -1252,6 +1088,12 @@ def reset_service_principal_credential(cmd, client, identifier, create_cert=Fals
     return result
 
 
+def delete_service_principal_credential(cmd, client, identifier, key_id, cert=False):
+    sp = show_service_principal(client, identifier)
+    _delete_credential(sp, client.service_principal_password_remove, client.service_principal_patch,
+                       key_id=key_id, cert=cert)
+
+
 def list_service_principal_credentials(cmd, identifier, cert=False):
     # Also see list_application_credentials
     client = _graph_client_factory(cmd.cli_ctx)
@@ -1260,12 +1102,6 @@ def list_service_principal_credentials(cmd, identifier, cert=False):
         return sp['keyCredentials']
     else:
         return sp['passwordCredentials']
-
-
-def delete_service_principal_credential(cmd, client, identifier, key_id, cert=False):
-    sp = show_service_principal(client, identifier)
-    _delete_credential(sp, client.service_principal_password_remove, client.service_principal_patch,
-                       key_id=key_id, cert=cert)
 
 
 def _get_app_object_id_from_sp_object_id(client, sp_object_id):
@@ -1728,11 +1564,6 @@ def _gen_guid():
     return uuid.uuid4()
 
 
-def show_signed_in_user(client):
-    result = client.signed_in_user_get()
-    return result
-
-
 def _application_add_password(client, app, start_datetime, end_datetime, display_name):
     """Let graph service generate a random password."""
     body = {
@@ -1960,3 +1791,174 @@ def _open(location):
     """Open a file that only the current user can access."""
     # The 600 seems no-op on Windows, and that is fine.
     return os.open(location, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0o600)
+
+
+def show_signed_in_user(client):
+    result = client.signed_in_user_get()
+    return result
+
+
+def list_owned_objects(client, object_type=None):
+    result = client.owned_objects_list()
+    if object_type:
+        result = [r for r in result if r.get('@odata.type') and _match_odata_type(r.get('@odata.type'), object_type)]
+    return result
+
+
+def create_user(client, user_principal_name, display_name, password,
+                mail_nickname=None, immutable_id=None, force_change_password_next_login=False):
+    '''
+    :param mail_nickname: mail alias. default to user principal name
+    '''
+    mail_nickname = mail_nickname or user_principal_name.split('@')[0]
+    body = {}
+    _set_user_properties(body, user_principal_name=user_principal_name, display_name=display_name, password=password,
+                         mail_nickname=mail_nickname, immutable_id=immutable_id,
+                         force_change_password_next_login=force_change_password_next_login, account_enabled=True)
+    return client.user_create(body)
+
+
+def update_user(client, upn_or_object_id, display_name=None, force_change_password_next_login=None, password=None,
+                account_enabled=None, mail_nickname=None):
+    body = {}
+    _set_user_properties(body, display_name=display_name, password=password, mail_nickname=mail_nickname,
+                         force_change_password_next_login=force_change_password_next_login,
+                         account_enabled=account_enabled)
+    return client.user_patch(id=upn_or_object_id, body=body)
+
+
+def _set_user_properties(body, **kwargs):
+    set_object_properties(user_property_map, body, **kwargs)
+
+
+def show_user(client, upn_or_object_id):
+    return client.user_get(id=upn_or_object_id)
+
+
+def delete_user(client, upn_or_object_id):
+    client.user_delete(id=upn_or_object_id)
+
+
+def list_users(client, upn=None, display_name=None, query_filter=None):
+    sub_filters = []
+    if query_filter:
+        sub_filters.append(query_filter)
+    if upn:
+        sub_filters.append("userPrincipalName eq '{}'".format(upn))
+    if display_name:
+        sub_filters.append("startswith(displayName,'{}')".format(display_name))
+
+    return client.user_list(filter=' and '.join(sub_filters) if sub_filters else None)
+
+
+def get_user_member_groups(client, upn_or_object_id, security_enabled_only=False):
+    if not is_guid(upn_or_object_id):
+        upn_or_object_id = client.user_get(upn_or_object_id)["id"]
+
+    results = client.user_member_groups_get(id=upn_or_object_id)
+    if security_enabled_only:
+        results = [res for res in results if res["securityEnabled"]]
+    return results
+
+
+def create_group(client, display_name, mail_nickname, force=None, description=None):
+    # workaround to ensure idempotent even AAD graph service doesn't support it
+    if not force:
+        matches = client.group_list(filter="displayName eq '{}' and mailNickname eq '{}'".format(display_name, mail_nickname))
+        if matches:
+            if len(matches) > 1:
+                err = ('There is more than one group with the same display and nick names: "{}". '
+                       'Please delete them first.')
+                raise CLIError(err.format(', '.join([x.object_id for x in matches])))
+            logger.warning('A group with the same display name and mail nickname already exists, returning.')
+            return matches[0]
+
+    body = {}
+    set_object_properties(group_property_map, body, display_name=display_name,
+                          mail_nickname=mail_nickname, description=description,
+                          mail_enabled=False, security_enabled=True)
+
+    return client.group_create(body=body)
+
+
+def list_groups(client, display_name=None, query_filter=None):
+    """List groups in the directory"""
+    sub_filters = []
+    if query_filter:
+        sub_filters.append(query_filter)
+    if display_name:
+        sub_filters.append("startswith(displayName,'{}')".format(display_name))
+    return client.group_list(filter=' and '.join(sub_filters) if sub_filters else None)
+
+
+def get_group(client, object_id):
+    """Get group information from the directory."""
+    return client.group_get(id=object_id)
+
+
+def delete_group(client, object_id):
+    """Delete a group from the directory."""
+    return client.group_delete(id=object_id)
+
+
+def get_member_groups(client, object_id, security_enabled_only):
+    """Get a collection of object IDs of groups of which the specified group is a member."""
+    body = {
+        "securityEnabledOnly": security_enabled_only
+    }
+    return client.directory_object_get_member_groups(id=object_id, body=body)
+
+
+def list_group_owners(client, group_id):
+    return client.group_owner_list(_resolve_group(client, group_id))
+
+
+def add_group_owner(client, owner_object_id, group_id):
+    group_object_id = _resolve_group(client, group_id)
+    owners = client.group_owner_list(group_object_id)
+    if not next((x for x in owners if x['id'] == owner_object_id), None):
+        owner_url = client.base_url + '/users/{id}'.format(id=owner_object_id)
+        body = {
+            "@odata.id": owner_url
+        }
+        return client.group_owner_add(id=group_object_id, body=body)
+
+
+def remove_group_owner(client, owner_object_id, group_id):
+    return client.group_owner_remove(_resolve_group(client, group_id), owner_object_id)
+
+
+def check_group_membership(client, group_id, member_object_id):
+    body = {"groupIds": [group_id]}
+    response = client.directory_object_check_member_groups(id=member_object_id, body=body)
+    return {"value": response is not None and group_id in response}
+
+
+def list_group_members(client, group_id):
+    """Get the members of a group."""
+    return client.group_member_list(id=group_id)
+
+
+def add_group_member(client, group_id, member_object_id):
+    """Add a member to a group."""
+    member_url = client.base_url + '/directoryObjects/{id}'.format(id=member_object_id)
+    body = {
+        "@odata.id": member_url
+    }
+    return client.group_member_add(id=group_id, body=body)
+
+
+def remove_group_member(client, group_id, member_object_id):
+    """Remove a member from a group."""
+    return client.group_member_remove(id=group_id, member_id=member_object_id)
+
+
+def _resolve_group(client, identifier):
+    if not is_guid(identifier):
+        res = list(list_groups(client, display_name=identifier))
+        if not res:
+            raise CLIError('Group {} is not found in Graph '.format(identifier))
+        if len(res) != 1:
+            raise CLIError('More than 1 group objects has the display name of ' + identifier)
+        identifier = res[0].object_id
+    return identifier
