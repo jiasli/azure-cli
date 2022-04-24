@@ -67,6 +67,55 @@ TEST_OPTIONAL_CLAIMS = '''{
     ]
 }'''
 
+TEST_REQUIRED_RESOURCE_ACCESS = '''[
+    {
+        "resourceAccess": [
+            {
+                "id": "41094075-9dad-400e-a0bd-54e686782033",
+                "type": "Scope"
+            }
+        ],
+        "resourceAppId": "797f4846-ba00-4fd7-ba43-dac1f8f63013"
+    },
+    {
+        "resourceAccess": [
+            {
+                "id": "c79f8feb-a9db-4090-85f9-90d820caa0eb",
+                "type": "Scope"
+            },
+            {
+                "id": "18a4783c-866b-4cc7-a460-3d5e5662c884",
+                "type": "Role"
+            }
+        ],
+        "resourceAppId": "00000003-0000-0000-c000-000000000000"
+    }
+]'''
+
+# TODO: https://github.com/Azure/azure-cli/pull/13769 fails to work
+# Cert created with
+# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 10000 -out certificate.pem
+TEST_CERTIFICATE = """
+MIIDazCCAlOgAwIBAgIUIp5vybhHfKN+ZKL28AntYKhlKXkwDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMDA3MjIwNzE3NDdaFw00NzEy
+MDgwNzE3NDdaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDMa00H+/p4RP4Eo//1J81Wowo4y1SKOJHbJ6T/lZ73
+5FzFX52gdQ/7HalJOwQdbha78RPGA7bXxEmyEo+q3w+IMYzrqboX5S9yf0v1DZvj
+a/VEMtUsq79d7NUUEd+smkuqDxDHFIkMeMM8cXy6tc+TPbc28BkQQiKbzOEZDwy4
+HPd7FCqCwwcZtgxfxFQx5A2DkAXtT53zQD8k1zY4UQWhkKDcgvINzQfYxJmUbXqH
+27MuJuejhpWLjmwEFCQtMJMrEv44YmlDzmL64iN5HFckO65ikV9fe9g9EcR5acSY
+2bsO8WyFYzTffVXFpFF011Vi4d/U0h4wSwj5KLMYMHkfAgMBAAGjUzBRMB0GA1Ud
+DgQWBBQxgpSKG7fwIHEopaRA10GB8Z8SOTAfBgNVHSMEGDAWgBQxgpSKG7fwIHEo
+paRA10GB8Z8SOTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAt
+I5vbHGxVV3qRtd9PEFe9dUb9Yv9YIa5RUd5l795cgr6qyELfg3xTPZbNf1oUHpGX
+NCfm1uqNTorIKOIEoTpA+STVwST/xcqzB6VjS31I/5IIrdK2NQenM+0DVJa+yGhX
++zI3+X3cO2YbyLSKBYqdMsqgnMS/ZC0NnrvigHgq2SC4Vzg8yz5rorjvLJ6ndeht
+oWOtdCJKUTPihNh4e+GM2A7UNKdt5WKCiS/n/lShvm+8JEG2lXQmmxR6DOjdDyC4
+/6tf7Ln7YoZZ0q6ICp04oMF6bvgGosdOkQATW4X97EmcfIBfHPX2w/Xn47np2rZr
+lBMWCjI8gO6W8YQMu7AH""".replace('\n', '')
+
 
 class AppScenarioTestBase(ScenarioTest):
     def tearDown(self):
@@ -74,7 +123,12 @@ class AppScenarioTestBase(ScenarioTest):
         for k, v in self.kwargs.items():
             if k.startswith('app_id'):
                 try:
+                    object_id = self.cmd("ad app show --id " + v).get_output_in_json()['id']
                     self.cmd("ad app delete --id " + v)
+                    # Permanently delete item
+                    # TODO: Add native commands for deleted items
+                    self.cmd("az rest --method DELETE "
+                             "--url https://graph.microsoft.com/v1.0/directory/deletedItems/" + object_id)
                 except:
                     pass
 
@@ -112,13 +166,12 @@ class AppScenarioTestBase(ScenarioTest):
 class ServicePrincipalExpressCreateScenarioTest(ScenarioTest):
 
     @AllowLargeResponse(8192)
-    def test_sp_create_scenario(self):
-        self.kwargs['display_name'] = self.create_random_name('clisp-test-', 20)
+    def test_sp_express_create_scenario(self):
+        self.kwargs['display_name'] = self.create_random_name('azure-cli-test', 20)
 
         # create app through express option
-        result = self.cmd('ad sp create-for-rbac -n {display_name} --skip-assignment',
+        result = self.cmd('ad sp create-for-rbac -n {display_name}',
                           checks=self.check('displayName', '{display_name}')).get_output_in_json()
-
         self.kwargs['app_id'] = result['appId']
 
         # show/list app
@@ -138,118 +191,20 @@ class ServicePrincipalExpressCreateScenarioTest(ScenarioTest):
             self.check('[0].servicePrincipalNames[0]', '{app_id}'),
             self.check('length([*])', 1),
         ])
-        self.cmd('ad sp credential reset -n {app_id}',
-                 checks=self.check('name', '{app_id}'))
+
         # cleanup
-        self.cmd('ad sp delete --id {app_id}')  # this would auto-delete the app as well
-        self.cmd('ad sp list --spn {app_id}',
-                 checks=self.is_empty())
-        self.cmd('ad app list --app-id {app_id}',
-                 checks=self.is_empty())
+        self.cmd('ad sp delete --id {app_id}')
+        self.cmd('ad sp list --spn {app_id}', checks=self.is_empty())
+
+        self.cmd('ad app delete --id {app_id}')
+        self.cmd('ad app list --app-id {app_id}', checks=self.is_empty())
         self.assertTrue(len(self.cmd('ad sp list').get_output_in_json()) <= 100)
         self.cmd('ad sp list --show-mine')
-
-    def test_native_app_create_scenario(self):
-        self.kwargs = {
-            'native_app_name': self.create_random_name('cli-native-', 20),
-            'required_access': json.dumps([
-                {
-                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
-                    "resourceAccess": [
-                        {
-                            "id": "5778995a-e1bf-45b8-affa-663a9f3f4d04",
-                            "type": "Scope"
-                        }
-                    ]
-                }]),
-            'required_access2': json.dumps([
-                {
-                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
-                    "resourceAccess": [
-                        {
-                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6",
-                            "type": "Scope"
-                        }
-                    ]
-                }
-            ])
-        }
-        result = self.cmd("ad app create --display-name {native_app_name} --native-app --required-resource-accesses '{required_access}'", checks=[
-            self.check('publicClient', True),
-            self.check('requiredResourceAccess|[0].resourceAccess|[0].id',
-                       '5778995a-e1bf-45b8-affa-663a9f3f4d04')
-        ]).get_output_in_json()
-        self.kwargs['id'] = result['appId']
-
-        # TODO: https://github.com/Azure/azure-cli/pull/13769 fails to work
-        # Cert created with
-        # openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 10000 -out certificate.pem
-        self.kwargs['cert_file'] = """
-MIIDazCCAlOgAwIBAgIUIp5vybhHfKN+ZKL28AntYKhlKXkwDQYJKoZIhvcNAQEL
-BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
-GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMDA3MjIwNzE3NDdaFw00NzEy
-MDgwNzE3NDdaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
-HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
-AQUAA4IBDwAwggEKAoIBAQDMa00H+/p4RP4Eo//1J81Wowo4y1SKOJHbJ6T/lZ73
-5FzFX52gdQ/7HalJOwQdbha78RPGA7bXxEmyEo+q3w+IMYzrqboX5S9yf0v1DZvj
-a/VEMtUsq79d7NUUEd+smkuqDxDHFIkMeMM8cXy6tc+TPbc28BkQQiKbzOEZDwy4
-HPd7FCqCwwcZtgxfxFQx5A2DkAXtT53zQD8k1zY4UQWhkKDcgvINzQfYxJmUbXqH
-27MuJuejhpWLjmwEFCQtMJMrEv44YmlDzmL64iN5HFckO65ikV9fe9g9EcR5acSY
-2bsO8WyFYzTffVXFpFF011Vi4d/U0h4wSwj5KLMYMHkfAgMBAAGjUzBRMB0GA1Ud
-DgQWBBQxgpSKG7fwIHEopaRA10GB8Z8SOTAfBgNVHSMEGDAWgBQxgpSKG7fwIHEo
-paRA10GB8Z8SOTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAt
-I5vbHGxVV3qRtd9PEFe9dUb9Yv9YIa5RUd5l795cgr6qyELfg3xTPZbNf1oUHpGX
-NCfm1uqNTorIKOIEoTpA+STVwST/xcqzB6VjS31I/5IIrdK2NQenM+0DVJa+yGhX
-+zI3+X3cO2YbyLSKBYqdMsqgnMS/ZC0NnrvigHgq2SC4Vzg8yz5rorjvLJ6ndeht
-oWOtdCJKUTPihNh4e+GM2A7UNKdt5WKCiS/n/lShvm+8JEG2lXQmmxR6DOjdDyC4
-/6tf7Ln7YoZZ0q6ICp04oMF6bvgGosdOkQATW4X97EmcfIBfHPX2w/Xn47np2rZr
-lBMWCjI8gO6W8YQMu7AH""".replace('\n', '')
-
-        result = self.cmd("ad app create --display-name {native_app_name} --key-value {cert_file}", checks=[
-            self.check('length(keyCredentials)', 1)
-        ])
-
-        try:
-            self.cmd("ad app update --id {id} --required-resource-accesses '{required_access2}'")
-            self.cmd('ad app show --id {id}', checks=[
-                self.check('publicClient', True),
-                self.check('requiredResourceAccess|[0].resourceAccess|[0].id',
-                           '311a71cc-e848-46a1-bdf8-97ff7156d8e6')
-            ])
-        except Exception:
-            self.cmd('ad app delete --id {id}')
-
-    def test_web_app_no_identifier_uris_other_tenants_create_scenario(self):
-        self.kwargs = {
-            'web_app_name': self.create_random_name('cli-web-', 20)
-        }
-
-        self.cmd("ad app create --display-name {web_app_name} --available-to-other-tenants true", checks=[
-            self.exists('appId')
-        ])
-
-    def test_app_create_idempotent(self):
-        self.kwargs = {
-            'display_name': self.create_random_name('app', 20)
-        }
-        app_id = None
-        try:
-            result = self.cmd("ad app create --display-name {display_name} --available-to-other-tenants true").get_output_in_json()
-            app_id = result['appId']
-            self.cmd("ad app create --display-name {display_name} --available-to-other-tenants false",
-                     checks=self.check('availableToOtherTenants', False))
-        finally:
-            self.cmd("ad app delete --id " + app_id)
-
-    def test_sp_show_exit_code(self):
-        with self.assertRaises(SystemExit):
-            self.assertEqual(self.cmd('ad sp show --id non-exist-sp-name').exit_code, 3)
-            self.assertEqual(self.cmd('ad sp show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
 
 class ApplicationScenarioTest(AppScenarioTestBase):
 
-    def test_application_scenario(self):
+    def test_app_scenario(self):
         """
         - Test creating application with its properties.
         - Test creating application first and update its properties.
@@ -266,8 +221,10 @@ class ApplicationScenarioTest(AppScenarioTestBase):
             'web_redirect_uri_2': 'http://localhost/webtest2',
             'public_client_redirect_uri_1': 'http://localhost/publicclienttest1',
             'public_client_redirect_uri_2': 'http://localhost/publicclienttest2',
+            'key_value': TEST_CERTIFICATE,
             'app_roles': TEST_APP_ROLES,
-            'optional_claims': TEST_OPTIONAL_CLAIMS
+            'optional_claims': TEST_OPTIONAL_CLAIMS,
+            'required_resource_accesses': TEST_REQUIRED_RESOURCE_ACCESS,
         })
 
         # Create
@@ -282,8 +239,12 @@ class ApplicationScenarioTest(AppScenarioTestBase):
             '--enable-access-token-issuance true --enable-id-token-issuance true '
             # publicClient
             '--public-client-redirect-uris {public_client_redirect_uri_1} {public_client_redirect_uri_2} '
+            # keyCredentials
+            '--key-value {key_value} '
+            # JSON properties
             "--app-roles '{app_roles}' "
-            "--optional-claims '{optional_claims}'",
+            "--optional-claims '{optional_claims}' "
+            "--required-resource-accesses '{required_resource_accesses}'",
             checks=[
                 self.check('displayName', '{display_name}'),
                 self.check('identifierUris[0]', '{identifier_uri}'),
@@ -296,8 +257,10 @@ class ApplicationScenarioTest(AppScenarioTestBase):
                 self.check('web.implicitGrantSettings.enableAccessTokenIssuance', True),
                 self.check('publicClient.redirectUris[0]', '{public_client_redirect_uri_1}'),
                 self.check('publicClient.redirectUris[1]', '{public_client_redirect_uri_2}'),
+                self.check('length(keyCredentials)', 1),
                 self.check('length(appRoles)', 2),
-                self.check('length(optionalClaims)', 3)
+                self.check('length(optionalClaims)', 3),
+                self.check('length(requiredResourceAccess)', 2)
             ]).get_output_in_json()
 
         self.kwargs['app_id'] = result['appId']
@@ -317,8 +280,7 @@ class ApplicationScenarioTest(AppScenarioTestBase):
         # service team.
         result = self.cmd('ad app create --display-name {display_name_2}').get_output_in_json()
         self.kwargs['app_id'] = result['appId']
-        import time
-        time.sleep(20)
+
         self.cmd(
             'ad app update --id {app_id} --display-name {display_name_3} '
             '--identifier-uris {identifier_uri_3} '
@@ -329,10 +291,13 @@ class ApplicationScenarioTest(AppScenarioTestBase):
             '--web-home-page-url {homepage} '
             '--web-redirect-uris {web_redirect_uri_1} {web_redirect_uri_2} '
             '--enable-access-token-issuance true --enable-id-token-issuance true '
+            # keyCredentials
+            '--key-value {key_value} '
             # publicClient
             '--public-client-redirect-uris {public_client_redirect_uri_1} {public_client_redirect_uri_2} '
             "--app-roles '{app_roles}' "
-            "--optional-claims '{optional_claims}'"
+            "--optional-claims '{optional_claims}' "
+            "--required-resource-accesses '{required_resource_accesses}'"
         )
         self.cmd(
             'ad app show --id {app_id}',
@@ -342,7 +307,7 @@ class ApplicationScenarioTest(AppScenarioTestBase):
                 self.check('isFallbackPublicClient', True),
                 # self.check('signInAudience', 'AzureADMultipleOrgs'),
                 self.check('web.homePageUrl', '{homepage}'),
-                # redirectUris doesn't preserve item order. Checking with service team.
+                # redirectUris doesn't preserve item order.
                 # self.check('web.redirectUris[0]', '{web_redirect_uri_1}'),
                 # self.check('web.redirectUris[1]', '{web_redirect_uri_2}'),
                 self.check('length(web.redirectUris)', 2),
@@ -351,12 +316,24 @@ class ApplicationScenarioTest(AppScenarioTestBase):
                 # self.check('publicClient.redirectUris[0]', '{public_client_redirect_uri_1}'),
                 # self.check('publicClient.redirectUris[1]', '{public_client_redirect_uri_2}'),
                 self.check('length(publicClient.redirectUris)', 2),
+                self.check('length(keyCredentials)', 1),
                 self.check('length(appRoles)', 2),
-                self.check('length(optionalClaims)', 3)
+                self.check('length(optionalClaims)', 3),
+                self.check('length(requiredResourceAccess)', 2)
             ]).get_output_in_json()
 
         self.cmd('ad app delete --id {app_id}')
         self.cmd('ad app show --id {app_id}', expect_failure=True)
+
+    def test_app_create_idempotent(self):
+        self.kwargs = {
+            'display_name': self.create_random_name('app', 20)
+        }
+        result = self.cmd("ad app create --display-name {display_name} --is-fallback-public-client true").get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self.cmd("ad app create --display-name {display_name} --is-fallback-public-client false",
+                 checks=[self.check('isFallbackPublicClient', False),
+                         self.check('appId', '{app_id}')])
 
     def test_app_resolution(self):
         """Test application can be resolved with identifierUris, appId, or id."""
@@ -381,6 +358,11 @@ class ApplicationScenarioTest(AppScenarioTestBase):
 
         self.cmd('ad app delete --id {app_id}')
 
+    def test_app_show_exit_code(self):
+        with self.assertRaises(SystemExit):
+            self.assertEqual(self.cmd('ad app show --id non-exist-identifierUris').exit_code, 3)
+            self.assertEqual(self.cmd('ad app show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
+
     def test_app_credential(self):
         display_name = self.create_random_name(prefix='azure-cli-test', length=30)
         self.kwargs.update({
@@ -390,11 +372,6 @@ class ApplicationScenarioTest(AppScenarioTestBase):
         result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
         self.kwargs['app_id'] = result['appId']
         self._test_credential('app')
-
-    def test_app_show_exit_code(self):
-        with self.assertRaises(SystemExit):
-            self.assertEqual(self.cmd('ad app show --id non-exist-identifierUris').exit_code, 3)
-            self.assertEqual(self.cmd('ad app show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
     def test_app_owner(self):
         owner = get_signed_in_user(self)
@@ -454,35 +431,30 @@ class ApplicationScenarioTest(AppScenarioTestBase):
         permissions = self.cmd(
             'ad app permission list --id {app_id}', checks=[self.check('length([*])', 2)]).get_output_in_json()
         # Sample result (required_resource_access):
-        # "requiredResourceAccess": [
+        #   "requiredResourceAccess": [
         #     {
-        #         "additionalProperties": null,
-        #         "resourceAccess": [
-        #             {
-        #                 "additionalProperties": null,
-        #                 "id": "41094075-9dad-400e-a0bd-54e686782033",
-        #                 "type": "Scope"
-        #             }
-        #         ],
-        #         "resourceAppId": "797f4846-ba00-4fd7-ba43-dac1f8f63013"
+        #       "resourceAccess": [
+        #         {
+        #           "id": "41094075-9dad-400e-a0bd-54e686782033",
+        #           "type": "Scope"
+        #         }
+        #       ],
+        #       "resourceAppId": "797f4846-ba00-4fd7-ba43-dac1f8f63013"
         #     },
         #     {
-        #         "additionalProperties": null,
-        #         "resourceAccess": [
-        #             {
-        #                 "additionalProperties": null,
-        #                 "id": "c79f8feb-a9db-4090-85f9-90d820caa0eb",
-        #                 "type": "Scope"
-        #             },
-        #             {
-        #                 "additionalProperties": null,
-        #                 "id": "18a4783c-866b-4cc7-a460-3d5e5662c884",
-        #                 "type": "Role"
-        #             }
-        #         ],
-        #         "resourceAppId": "00000003-0000-0000-c000-000000000000"
+        #       "resourceAccess": [
+        #         {
+        #           "id": "c79f8feb-a9db-4090-85f9-90d820caa0eb",
+        #           "type": "Scope"
+        #         },
+        #         {
+        #           "id": "18a4783c-866b-4cc7-a460-3d5e5662c884",
+        #           "type": "Role"
+        #         }
+        #       ],
+        #       "resourceAppId": "00000003-0000-0000-c000-000000000000"
         #     }
-        # ],
+        #   ],
 
         microsoft_graph_permission1_object = {
             "id": self.kwargs['microsoft_graph_permission1'],
@@ -672,6 +644,11 @@ class ServicePrincipalScenarioTest(AppScenarioTestBase):
 
         self.cmd('ad sp show --id {app_id}', expect_failure=True)
         self.cmd('ad app show --id {app_id}', expect_failure=True)
+
+    def test_sp_show_exit_code(self):
+        with self.assertRaises(SystemExit):
+            self.assertEqual(self.cmd('ad sp show --id non-exist-sp-name').exit_code, 3)
+            self.assertEqual(self.cmd('ad sp show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
     def test_sp_owner(self):
         display_name = self.create_random_name(prefix='azure-cli-test', length=30)
