@@ -78,6 +78,36 @@ class AppScenarioTestBase(ScenarioTest):
                 except:
                     pass
 
+    def _test_credential(self, object_type):
+        """Test app/sp credential commands. Make sure app_id has been configured in self.kwargs."""
+        self.kwargs['object_type'] = object_type
+
+        # Set password
+        self.cmd('ad {object_type} credential reset --id {app_id} --append --years 2 --display-name key1',
+                 checks=self.check('appId', '{app_id}'))
+
+        result = self.cmd('ad {object_type} credential list --id {app_id}',
+                          checks=self.check('length([*])', 1)).get_output_in_json()
+        key_id = result[0]['keyId']
+        self.cmd('ad {object_type} credential reset --id {app_id} --append --display-name key2')
+        self.cmd('ad {object_type} credential list --id {app_id}', checks=[
+            self.check('length([*])', 2),
+            # Graph API reverses the order of insertion
+            self.check('[0].displayName', 'key2'),
+            self.check('[1].displayName', 'key1')
+        ])
+        self.cmd('ad {object_type} credential delete --id {app_id} --key-id ' + key_id)
+        self.cmd('ad {object_type} credential list --id {app_id}', checks=self.check('length([*])', 1))
+
+        # try use --end-date
+        self.cmd('ad {object_type} credential reset --id {app_id} --end-date "2100-12-31T11:59:59+00:00"')
+        self.cmd('ad {object_type} credential list --id {app_id}',
+                 checks=self.check('[0].endDateTime', '2100-12-31T11:59:59Z'))
+
+        self.cmd('ad {object_type} credential reset --id {app_id} --end-date "2100-12-31"')
+        self.cmd('ad {object_type} credential list --id {app_id}',
+                 checks=self.check('[0].endDateTime', '2100-12-31T00:00:00Z'))
+
 
 class ServicePrincipalExpressCreateScenarioTest(ScenarioTest):
 
@@ -357,31 +387,9 @@ class ApplicationScenarioTest(AppScenarioTestBase):
             'display_name': display_name
         })
 
-        result = self.cmd('ad app create --display-name {display_name} ').get_output_in_json()
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
         self.kwargs['app_id'] = result['appId']
-
-        # set app password
-        self.cmd('ad app credential reset --id {app_id} --append --years 2 --display-name key1',
-                 checks=self.check('appId', '{app_id}'))
-
-        result = self.cmd('ad app credential list --id {app_id}', checks=self.check('length([*])', 1)).get_output_in_json()
-        key_id = result[0]['keyId']
-        self.cmd('ad app credential reset --id {app_id} --append --display-name key2')
-        self.cmd('ad app credential list --id {app_id}', checks=[
-            self.check('length([*])', 2),
-            # Graph API reverses the order of insertion
-            self.check('[0].displayName', 'key2'),
-            self.check('[1].displayName', 'key1')
-        ])
-        self.cmd('ad app credential delete --id {app_id} --key-id ' + key_id)
-        self.cmd('ad app credential list --id {app_id}', checks=self.check('length([*])', 1))
-
-        # try use --end-date
-        self.cmd('ad app credential reset --id {app_id} --end-date "2100-12-31T11:59:59+00:00"')
-        self.cmd('ad app credential list --id {app_id}', checks=self.check('[0].endDateTime', '2100-12-31T11:59:59Z'))
-
-        self.cmd('ad app credential reset --id {app_id} --end-date "2100-12-31"')
-        self.cmd('ad app credential list --id {app_id}', checks=self.check('[0].endDateTime', '2100-12-31T00:00:00Z'))
+        self._test_credential('app')
 
     def test_app_show_exit_code(self):
         with self.assertRaises(SystemExit):
@@ -678,6 +686,17 @@ class ServicePrincipalScenarioTest(AppScenarioTestBase):
 
         # We don't support create, remove yet
         self.cmd('ad sp owner list --id {app_id}', checks=self.check('length(@)', 0))
+
+    def test_sp_credential(self):
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
+        self.kwargs.update({
+            'display_name': display_name
+        })
+
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self.cmd('ad sp create --id {app_id}').get_output_in_json()
+        self._test_credential('sp')
 
 
 class CreateForRbacScenarioTest(ScenarioTest):
