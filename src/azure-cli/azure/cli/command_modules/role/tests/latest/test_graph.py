@@ -3,6 +3,8 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 import json
+import os
+import sys
 from unittest import mock
 import unittest
 import datetime
@@ -117,7 +119,7 @@ oWOtdCJKUTPihNh4e+GM2A7UNKdt5WKCiS/n/lShvm+8JEG2lXQmmxR6DOjdDyC4
 lBMWCjI8gO6W8YQMu7AH""".replace('\n', '')
 
 
-class AppScenarioTestBase(ScenarioTest):
+class GraphScenarioTestBase(ScenarioTest):
     def tearDown(self):
         # If self.kwargs contains appId, try best to delete the app.
         for k, v in self.kwargs.items():
@@ -131,12 +133,19 @@ class AppScenarioTestBase(ScenarioTest):
                              "--url https://graph.microsoft.com/v1.0/directory/deletedItems/" + object_id)
                 except:
                     pass
+        super().tearDown()
+
+    def _get_signed_in_user(self):
+        account_info = self.cmd('account show').get_output_in_json()
+        if account_info['user']['type'] == 'user':
+            return account_info['user']['name']
+        return None
 
     def _test_credential(self, object_type):
         """Test app/sp credential commands. Make sure app_id has been configured in self.kwargs."""
         self.kwargs['object_type'] = object_type
 
-        # Set password
+        # Test password
         self.cmd('ad {object_type} credential reset --id {app_id} --append --years 2 --display-name key1',
                  checks=self.check('appId', '{app_id}'))
 
@@ -162,8 +171,18 @@ class AppScenarioTestBase(ScenarioTest):
         self.cmd('ad {object_type} credential list --id {app_id}',
                  checks=self.check('[0].endDateTime', '2100-12-31T00:00:00Z'))
 
+        # Test certificate
+        result = self.cmd('ad {object_type} credential reset --id {app_id} --create-cert',
+                          checks=self.check('appId', '{app_id}')).get_output_in_json()
+        self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
 
-class ApplicationScenarioTest(AppScenarioTestBase):
+        if sys.platform != 'win32':
+            assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
+
+        os.remove(result['fileWithCertAndPrivateKey'])
+
+
+class ApplicationScenarioTest(GraphScenarioTestBase):
 
     def test_app_scenario(self):
         """
@@ -324,7 +343,37 @@ class ApplicationScenarioTest(AppScenarioTestBase):
             self.assertEqual(self.cmd('ad app show --id non-exist-identifierUris').exit_code, 3)
             self.assertEqual(self.cmd('ad app show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
-    def test_app_credential(self):
+    def test_app_credential_password(self):
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
+        self.kwargs.update({
+            'display_name': display_name
+        })
+
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self._test_credential('app')
+
+    def test_app_credential_with_cert(self):
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
+        self.kwargs.update({
+            'display_name': display_name
+        })
+
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self._test_credential('app')
+
+    def test_app_credential_with_with_new_keyvault_cert(self):
+        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
+        self.kwargs.update({
+            'display_name': display_name
+        })
+
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self._test_credential('app')
+
+    def test_app_credential_with_existing_kv_cert(self):
         display_name = self.create_random_name(prefix='azure-cli-test', length=30)
         self.kwargs.update({
             'display_name': display_name
@@ -335,7 +384,7 @@ class ApplicationScenarioTest(AppScenarioTestBase):
         self._test_credential('app')
 
     def test_app_owner(self):
-        owner = get_signed_in_user(self)
+        owner = self._get_signed_in_user()
         if not owner:
             return  # this test deletes users which are beyond a SP's capacity, so quit.
 
@@ -564,7 +613,7 @@ class ApplicationScenarioTest(AppScenarioTestBase):
         self.cmd('ad app permission list --id {app_id}', checks=self.check('length([*])', 0))
 
 
-class ServicePrincipalScenarioTest(AppScenarioTestBase):
+class ServicePrincipalScenarioTest(GraphScenarioTestBase):
 
     def test_service_principal_scenario(self):
         """
@@ -854,17 +903,6 @@ class GroupScenarioTest(ScenarioTest):
             self.clean_resource('{}@{}'.format(self.kwargs['user2'], self.kwargs['domain']), type='user')
             if self.kwargs.get('app_id'):
                 self.clean_resource(self.kwargs['app_id'], type='app')
-
-
-def get_signed_in_user(test_case):
-    playback = not (test_case.is_live or test_case.in_recording)
-    if playback:
-        return MOCKED_USER_NAME
-    else:
-        account_info = test_case.cmd('account show').get_output_in_json()
-        if account_info['user']['type'] != 'servicePrincipal':
-            return account_info['user']['name']
-    return None
 
 
 def _get_id_from_value(permissions, value):

@@ -18,48 +18,26 @@ from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 from azure.cli.core.profiles import ResourceType, get_sdk
 from azure.cli.testsdk import ScenarioTest, LiveScenarioTest, ResourceGroupPreparer, KeyVaultPreparer
 from ..util import retry
+from .test_graph import GraphScenarioTestBase
 
 
-class RoleScenarioTest(ScenarioTest):
+class RoleScenarioTestBase(GraphScenarioTestBase):
 
     def run_under_service_principal(self):
-        account_info = self.cmd('account show').get_output_in_json()
-        return account_info['user']['type'] == 'servicePrincipal'
+        return not self._get_signed_in_user()
 
 
-class RbacSPSecretScenarioTest(RoleScenarioTest):
-    def test_create_for_rbac_with_right_display_name(self):
-        sp_name = self.create_random_name('cli-test-sp', 15)
-        self.kwargs['display_name'] = sp_name
-        self.kwargs['display_name_new'] = self.create_random_name('cli-test-sp', 15)
+class RbacSPSecretScenarioTest(RoleScenarioTestBase):
 
-        try:
-            sp_info = self.cmd('ad sp create-for-rbac -n {display_name}').get_output_in_json()
-            self.assertTrue(sp_info['displayName'] == sp_name)
-            self.kwargs['app_id'] = sp_info['appId']
-
-            # verify password can be used in cli
-            self.kwargs['gen_password'] = sp_info['password']
-            sp_info2 = self.cmd('ad app create --display-name {display_name_new} --password {gen_password}')\
-                .get_output_in_json()
-            self.kwargs['sp_new'] = sp_info2['appId']
-        finally:
-            self.cmd('ad app delete --id {app_id}')
-            self.cmd('ad app delete --id {sp_new}')
-
-    @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_minimal')
-    def test_create_for_rbac_with_secret_no_assignment(self, resource_group):
-
-        self.kwargs['display_name'] = resource_group
-        try:
-            result = self.cmd('ad sp create-for-rbac -n {display_name}',
-                              checks=self.check('displayName', '{display_name}')).get_output_in_json()
-            self.kwargs['app_id'] = result['appId']
-        finally:
-            self.cmd('ad app delete --id {app_id}')
+    def test_create_for_rbac_with_secret_no_assignment(self):
+        self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
+        result = self.cmd('ad sp create-for-rbac --display-name {display_name}',
+                          checks=self.check('displayName', '{display_name}')).get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self.cmd('role assignment list --assignee {app_id} --all', checks=self.check('length(@)', 0))
 
     @AllowLargeResponse()
-    @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_with_password')
+    @ResourceGroupPreparer(name_prefix='cli_sp_create_for_rbac')
     def test_create_for_rbac_with_secret_with_assignment(self, resource_group):
 
         subscription_id = self.get_subscription_id()
@@ -70,22 +48,18 @@ class RbacSPSecretScenarioTest(RoleScenarioTest):
             'display_name': resource_group
         })
 
-        try:
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac -n {display_name} '
-                                  '--scopes {scope} --role {role}',
-                                  checks=self.check('displayName', '{display_name}')).get_output_in_json()
-                self.kwargs['app_id'] = result['appId']
-                self.cmd('role assignment list --assignee {app_id} -g {rg}',
-                         checks=[
-                             self.check("length([])", 1),
-                             self.check("[0].roleDefinitionName", '{role}'),
-                             self.check("[0].scope", '{scope}')
-                         ])
-                self.cmd('role assignment delete --assignee {app_id} -g {rg}',
-                         checks=self.is_empty())
-        finally:
-            self.cmd('ad app delete --id {app_id}')
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            result = self.cmd('ad sp create-for-rbac -n {display_name} --scopes {scope} --role {role}',
+                              checks=self.check('displayName', '{display_name}')).get_output_in_json()
+            self.kwargs['app_id'] = result['appId']
+            self.cmd('role assignment list --assignee {app_id} --resource-group {rg}',
+                     checks=[
+                         self.check("length([])", 1),
+                         self.check("[0].roleDefinitionName", '{role}'),
+                         self.check("[0].scope", '{scope}')
+                     ])
+            self.cmd('role assignment delete --assignee {app_id} -g {rg}',
+                     checks=self.is_empty())
 
     def test_create_for_rbac_argument_error(self):
 
@@ -102,40 +76,24 @@ class RbacSPSecretScenarioTest(RoleScenarioTest):
         with self.assertRaisesRegex(ArgumentUsageError, 'both'):
             self.cmd('ad sp create-for-rbac --role {role}')
 
-    @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_with_cert')
-    def test_create_for_rbac_with_cert_no_assignment(self, resource_group):
+    def test_create_for_rbac_with_cert_no_assignment(self):
 
-        self.kwargs.update({
-            'display_name': resource_group,
-        })
+        self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
 
-        try:
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac -n {display_name} --create-cert',
-                                  checks=self.check('displayName', '{display_name}')).get_output_in_json()
-                self.kwargs['app_id'] = result['appId']
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            result = self.cmd('ad sp create-for-rbac -n {display_name} --create-cert',
+                              checks=self.check('displayName', '{display_name}')).get_output_in_json()
+            self.kwargs['app_id'] = result['appId']
 
-                self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
+            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
 
-                # On Linux or MacOS, check the cert file is a regular file (S_IFREG 0100000) with permission 600
-                # https://manpages.ubuntu.com/manpages/focal/man7/inode.7.html
-                # Windows doesn't have the Linux permission concept.
-                if sys.platform != 'win32':
-                    assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
+            # On Linux or MacOS, check the cert file is a regular file (S_IFREG 0100000) with permission 600
+            # https://manpages.ubuntu.com/manpages/focal/man7/inode.7.html
+            # Windows doesn't have the Linux permission concept.
+            if sys.platform != 'win32':
+                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
 
-                os.remove(result['fileWithCertAndPrivateKey'])
-
-                result = self.cmd('ad sp credential reset -n {app_id} --create-cert',
-                                  checks=self.check('name', '{app_id}')).get_output_in_json()
-                self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
-
-                if sys.platform != 'win32':
-                    assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
-
-                os.remove(result['fileWithCertAndPrivateKey'])
-        finally:
-            self.cmd('ad app delete --id {app_id}',
-                     checks=self.is_empty())
+            os.remove(result['fileWithCertAndPrivateKey'])
 
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_new_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-new-kv')
@@ -152,24 +110,20 @@ class RbacSPSecretScenarioTest(RoleScenarioTest):
         })
 
         time.sleep(5)  # to avoid 504(too many requests) on a newly created vault
-
-        try:
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                try:
-                    result = self.cmd('ad sp create-for-rbac --create-cert '
-                                      '--keyvault {kv} --cert {cert} -n {display_name}').get_output_in_json()
-                    self.kwargs['app_id'] = result['appId']
-                except KeyVaultErrorException:
-                    if not self.is_live and not self.in_recording:
-                        pass  # temporary workaround for keyvault challenge handling was ignored under playback
-                    else:
-                        raise
-                cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-                self.cmd('ad sp credential reset -n {app_id} --create-cert --keyvault {kv} --cert {cert}')
-                cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-                self.assertTrue(cer1 != cer2)
-        finally:
-            self.cmd('ad app delete --id {app_id}')
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            try:
+                result = self.cmd('ad sp create-for-rbac --create-cert '
+                                  '--keyvault {kv} --cert {cert} -n {display_name}').get_output_in_json()
+                self.kwargs['app_id'] = result['appId']
+            except KeyVaultErrorException:
+                if not self.is_live and not self.in_recording:
+                    pass  # temporary workaround for keyvault challenge handling was ignored under playback
+                else:
+                    raise
+            cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
+            self.cmd('ad sp credential reset -n {app_id} --create-cert --keyvault {kv} --cert {cert}')
+            cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
+            self.assertTrue(cer1 != cer2)
 
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_existing_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-exist-kv')
@@ -219,7 +173,7 @@ class RbacSPSecretScenarioTest(RoleScenarioTest):
                 pass
 
 
-class RoleCreateScenarioTest(RoleScenarioTest):
+class RoleCreateScenarioTest(RoleScenarioTestBase):
 
     @AllowLargeResponse()
     def test_role_create_scenario(self):
@@ -276,7 +230,7 @@ class RoleCreateScenarioTest(RoleScenarioTest):
             retry(lambda: self.cmd('role definition list -n {role}', checks=self.is_empty()))
 
 
-class RoleAssignmentScenarioTest(RoleScenarioTest):
+class RoleAssignmentScenarioTest(RoleScenarioTestBase):
 
     @ResourceGroupPreparer(name_prefix='cli_role_assign')
     @AllowLargeResponse()
