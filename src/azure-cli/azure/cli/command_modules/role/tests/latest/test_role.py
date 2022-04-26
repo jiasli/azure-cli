@@ -102,9 +102,6 @@ class RbacSPSecretScenarioTest(RoleScenarioTest):
         with self.assertRaisesRegex(ArgumentUsageError, 'both'):
             self.cmd('ad sp create-for-rbac --role {role}')
 
-
-class RbacSPCertScenarioTest(RoleScenarioTest):
-
     @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_with_cert')
     def test_create_for_rbac_with_cert_no_assignment(self, resource_group):
 
@@ -140,8 +137,6 @@ class RbacSPCertScenarioTest(RoleScenarioTest):
             self.cmd('ad app delete --id {app_id}',
                      checks=self.is_empty())
 
-
-class RbacSPKeyVaultScenarioTest2(ScenarioTest):
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_new_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-new-kv')
     def test_create_for_rbac_with_new_kv_cert(self, resource_group, key_vault):
@@ -176,8 +171,6 @@ class RbacSPKeyVaultScenarioTest2(ScenarioTest):
         finally:
             self.cmd('ad app delete --id {app_id}')
 
-
-class RbacSPKeyVaultScenarioTest(ScenarioTest):
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_existing_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-exist-kv')
     def test_create_for_rbac_with_existing_kv_cert(self, resource_group, key_vault):

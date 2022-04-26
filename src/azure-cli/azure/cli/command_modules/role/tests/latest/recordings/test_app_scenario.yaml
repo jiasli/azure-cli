@@ -1,0 +1,1034 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app create
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --display-name --identifier-uris --is-fallback-public-client --sign-in-audience
+        --web-home-page-url --web-redirect-uris --enable-access-token-issuance --enable-id-token-issuance
+        --public-client-redirect-uris --key-value --app-roles --optional-claims --required-resource-accesses
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=startswith(displayName,'azure-cli-test000001')
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '87'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:32:52 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - 20ac7522-9472-48a9-a7d3-bf08b395de21
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00001E1E"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"displayName": "azure-cli-test000001", "identifierUris": ["api://azure-cli-test000001"],
+      "isFallbackPublicClient": true, "signInAudience": "AzureADMultipleOrgs", "keyCredentials":
+      [{"@odata.type": "#microsoft.graph.keyCredential", "displayName": null, "endDateTime":
+      "2023-04-25T13:32:53Z", "key": "MIIDazCCAlOgAwIBAgIUIp5vybhHfKN+ZKL28AntYKhlKXkwDQYJKoZIhvcNAQELBQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMDA3MjIwNzE3NDdaFw00NzEyMDgwNzE3NDdaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDMa00H+/p4RP4Eo//1J81Wowo4y1SKOJHbJ6T/lZ735FzFX52gdQ/7HalJOwQdbha78RPGA7bXxEmyEo+q3w+IMYzrqboX5S9yf0v1DZvja/VEMtUsq79d7NUUEd+smkuqDxDHFIkMeMM8cXy6tc+TPbc28BkQQiKbzOEZDwy4HPd7FCqCwwcZtgxfxFQx5A2DkAXtT53zQD8k1zY4UQWhkKDcgvINzQfYxJmUbXqH27MuJuejhpWLjmwEFCQtMJMrEv44YmlDzmL64iN5HFckO65ikV9fe9g9EcR5acSY2bsO8WyFYzTffVXFpFF011Vi4d/U0h4wSwj5KLMYMHkfAgMBAAGjUzBRMB0GA1UdDgQWBBQxgpSKG7fwIHEopaRA10GB8Z8SOTAfBgNVHSMEGDAWgBQxgpSKG7fwIHEopaRA10GB8Z8SOTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAtI5vbHGxVV3qRtd9PEFe9dUb9Yv9YIa5RUd5l795cgr6qyELfg3xTPZbNf1oUHpGXNCfm1uqNTorIKOIEoTpA+STVwST/xcqzB6VjS31I/5IIrdK2NQenM+0DVJa+yGhX+zI3+X3cO2YbyLSKBYqdMsqgnMS/ZC0NnrvigHgq2SC4Vzg8yz5rorjvLJ6ndehtoWOtdCJKUTPihNh4e+GM2A7UNKdt5WKCiS/n/lShvm+8JEG2lXQmmxR6DOjdDyC4/6tf7Ln7YoZZ0q6ICp04oMF6bvgGosdOkQATW4X97EmcfIBfHPX2w/Xn47np2rZrlBMWCjI8gO6W8YQMu7AH",
+      "keyId": "9d17064b-966c-4dda-963d-40c2e489d343", "startDateTime": "2022-04-26T13:32:53Z",
+      "type": "AsymmetricX509Cert", "usage": "Verify"}], "web": {"homePageUrl": "https://myapp.com/",
+      "redirectUris": ["http://localhost/webtest1", "http://localhost/webtest2"],
+      "implicitGrantSettings": {"enableIdTokenIssuance": true, "enableAccessTokenIssuance":
+      true}}, "publicClient": {"redirectUris": ["http://localhost/publicclienttest1",
+      "http://localhost/publicclienttest2"]}, "appRoles": [{"allowedMemberTypes":
+      ["User"], "displayName": "Writer", "id": "d1c2ade8-0000-0000-0000-6d06b947c66f",
+      "isEnabled": true, "description": "Writers Have the ability to create tasks.",
+      "value": "Writer"}, {"allowedMemberTypes": ["Application"], "displayName": "ConsumerApps",
+      "id": "47fbb575-0000-0000-0000-0f7a6c30beac", "isEnabled": true, "description":
+      "Consumer apps have access to the consumer data.", "value": "Consumer"}], "optionalClaims":
+      {"idToken": [{"name": "auth_time", "essential": false}], "accessToken": [{"name":
+      "ipaddr", "essential": false}], "saml2Token": [{"name": "upn", "essential":
+      false}, {"name": "extension_ab603c56068041afb2f6832e2a17e237_skypeId", "source":
+      "user", "essential": false}]}, "requiredResourceAccess": [{"resourceAccess":
+      [{"id": "41094075-9dad-400e-a0bd-54e686782033", "type": "Scope"}], "resourceAppId":
+      "797f4846-ba00-4fd7-ba43-dac1f8f63013"}, {"resourceAccess": [{"id": "c79f8feb-a9db-4090-85f9-90d820caa0eb",
+      "type": "Scope"}, {"id": "18a4783c-866b-4cc7-a460-3d5e5662c884", "type": "Role"}],
+      "resourceAppId": "00000003-0000-0000-c000-000000000000"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app create
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3051'
+      Content-Type:
+      - application/json
+      ParameterSetName:
+      - --display-name --identifier-uris --is-fallback-public-client --sign-in-audience
+        --web-home-page-url --web-redirect-uris --enable-access-token-issuance --enable-id-token-issuance
+        --public-client-redirect-uris --key-value --app-roles --optional-claims --required-resource-accesses
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: POST
+    uri: https://graph.microsoft.com/v1.0/applications
+  response:
+    body:
+      string: '{"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#applications/$entity",
+        "id": "9db56cae-fc1b-4a4c-b63c-8a7744421dc4", "deletedDateTime": null, "appId":
+        "1af64286-2263-4408-b33c-6c333904fbe5", "applicationTemplateId": null, "disabledByMicrosoftStatus":
+        null, "createdDateTime": "2022-04-26T13:32:54.8005402Z", "displayName": "azure-cli-test000001",
+        "description": null, "groupMembershipClaims": null, "identifierUris": ["api://azure-cli-test000001"],
+        "isDeviceOnlyAuthSupported": null, "isFallbackPublicClient": true, "notes":
+        null, "publisherDomain": "AzureSDKTeam.onmicrosoft.com", "serviceManagementReference":
+        null, "signInAudience": "AzureADMultipleOrgs", "tags": [], "tokenEncryptionKeyId":
+        null, "defaultRedirectUri": null, "certification": null, "addIns": [], "api":
+        {"acceptMappedClaims": null, "knownClientApplications": [], "requestedAccessTokenVersion":
+        null, "oauth2PermissionScopes": [], "preAuthorizedApplications": []}, "appRoles":
+        [{"allowedMemberTypes": ["User"], "description": "Writers Have the ability
+        to create tasks.", "displayName": "Writer", "id": "d1c2ade8-0000-0000-0000-6d06b947c66f",
+        "isEnabled": true, "origin": "Application", "value": "Writer"}, {"allowedMemberTypes":
+        ["Application"], "description": "Consumer apps have access to the consumer
+        data.", "displayName": "ConsumerApps", "id": "47fbb575-0000-0000-0000-0f7a6c30beac",
+        "isEnabled": true, "origin": "Application", "value": "Consumer"}], "info":
+        {"logoUrl": null, "marketingUrl": null, "privacyStatementUrl": null, "supportUrl":
+        null, "termsOfServiceUrl": null}, "keyCredentials": [{"customKeyIdentifier":
+        "7AB4DD9219E5E03ECC025136572DFAA262EC85CB", "displayName": "O=Internet Widgits
+        Pty Ltd, S=Some-State, C=AU", "endDateTime": "2023-04-25T13:32:53Z", "key":
+        null, "keyId": "9d17064b-966c-4dda-963d-40c2e489d343", "startDateTime": "2022-04-26T13:32:53Z",
+        "type": "AsymmetricX509Cert", "usage": "Verify"}], "optionalClaims": {"accessToken":
+        [{"additionalProperties": [], "essential": false, "name": "ipaddr", "source":
+        null}], "idToken": [{"additionalProperties": [], "essential": false, "name":
+        "auth_time", "source": null}], "saml2Token": [{"additionalProperties": [],
+        "essential": false, "name": "upn", "source": null}, {"additionalProperties":
+        [], "essential": false, "name": "extension_ab603c56068041afb2f6832e2a17e237_skypeId",
+        "source": "user"}]}, "parentalControlSettings": {"countriesBlockedForMinors":
+        [], "legalAgeGroupRule": "Allow"}, "passwordCredentials": [], "publicClient":
+        {"redirectUris": ["http://localhost/publicclienttest1", "http://localhost/publicclienttest2"]},
+        "requiredResourceAccess": [{"resourceAppId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+        "resourceAccess": [{"id": "41094075-9dad-400e-a0bd-54e686782033", "type":
+        "Scope"}]}, {"resourceAppId": "00000003-0000-0000-c000-000000000000", "resourceAccess":
+        [{"id": "c79f8feb-a9db-4090-85f9-90d820caa0eb", "type": "Scope"}, {"id": "18a4783c-866b-4cc7-a460-3d5e5662c884",
+        "type": "Role"}]}], "verifiedPublisher": {"displayName": null, "verifiedPublisherId":
+        null, "addedDateTime": null}, "web": {"homePageUrl": "https://myapp.com/",
+        "logoutUrl": null, "redirectUris": ["http://localhost/webtest1", "http://localhost/webtest2"],
+        "implicitGrantSettings": {"enableAccessTokenIssuance": true, "enableIdTokenIssuance":
+        true}}, "spa": {"redirectUris": []}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '3327'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:32:54 GMT
+      location:
+      - https://graph.microsoft.com/v2/54826b22-38d6-4fb2-bad9-b7b93a3e9c5a/directoryObjects/9db56cae-fc1b-4a4c-b63c-8a7744421dc4/Microsoft.DirectoryServices.Application
+      odata-version:
+      - '4.0'
+      request-id:
+      - 002e2c8f-d230-4826-ae03-2da60ba1885a
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00000BC8"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 201
+      message: Created
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app delete
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'1af64286-2263-4408-b33c-6c333904fbe5'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[{"id":"9db56cae-fc1b-4a4c-b63c-8a7744421dc4","deletedDateTime":null,"appId":"1af64286-2263-4408-b33c-6c333904fbe5","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:54Z","displayName":"azure-cli-test000001","description":null,"groupMembershipClaims":null,"identifierUris":["api://azure-cli-test000001"],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":true,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADMultipleOrgs","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":null,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[{"allowedMemberTypes":["Application"],"description":"Consumer
+        apps have access to the consumer data.","displayName":"ConsumerApps","id":"47fbb575-0000-0000-0000-0f7a6c30beac","isEnabled":true,"origin":"Application","value":"Consumer"},{"allowedMemberTypes":["User"],"description":"Writers
+        Have the ability to create tasks.","displayName":"Writer","id":"d1c2ade8-0000-0000-0000-6d06b947c66f","isEnabled":true,"origin":"Application","value":"Writer"}],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[{"customKeyIdentifier":"7AB4DD9219E5E03ECC025136572DFAA262EC85CB","displayName":"O=Internet
+        Widgits Pty Ltd, S=Some-State, C=AU","endDateTime":"2023-04-25T13:32:53Z","key":null,"keyId":"9d17064b-966c-4dda-963d-40c2e489d343","startDateTime":"2022-04-26T13:32:53Z","type":"AsymmetricX509Cert","usage":"Verify"}],"optionalClaims":{"accessToken":[{"additionalProperties":[],"essential":false,"name":"ipaddr","source":null}],"idToken":[{"additionalProperties":[],"essential":false,"name":"auth_time","source":null}],"saml2Token":[{"additionalProperties":[],"essential":false,"name":"upn","source":null},{"additionalProperties":[],"essential":false,"name":"extension_ab603c56068041afb2f6832e2a17e237_skypeId","source":"user"}]},"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":["http://localhost/publicclienttest2","http://localhost/publicclienttest1"]},"requiredResourceAccess":[{"resourceAppId":"00000003-0000-0000-c000-000000000000","resourceAccess":[{"id":"c79f8feb-a9db-4090-85f9-90d820caa0eb","type":"Scope"},{"id":"18a4783c-866b-4cc7-a460-3d5e5662c884","type":"Role"}]},{"resourceAppId":"797f4846-ba00-4fd7-ba43-dac1f8f63013","resourceAccess":[{"id":"41094075-9dad-400e-a0bd-54e686782033","type":"Scope"}]}],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":"https://myapp.com/","logoutUrl":null,"redirectUris":["http://localhost/webtest2","http://localhost/webtest1"],"implicitGrantSettings":{"enableAccessTokenIssuance":true,"enableIdTokenIssuance":true}},"spa":{"redirectUris":[]}}]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '3123'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:32:54 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - e8282cfd-36b3-4fdf-b2d9-f7f9fd7ee432
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00000BCC"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app delete
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: DELETE
+    uri: https://graph.microsoft.com/v1.0/applications/9db56cae-fc1b-4a4c-b63c-8a7744421dc4
+  response:
+    body:
+      string: ''
+    headers:
+      cache-control:
+      - no-cache
+      date:
+      - Tue, 26 Apr 2022 13:32:56 GMT
+      request-id:
+      - caa7bae9-53d3-44a9-a378-0e6aa6689138
+      strict-transport-security:
+      - max-age=31536000
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000022D6"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'1af64286-2263-4408-b33c-6c333904fbe5'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '87'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:32:57 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - f1a4d0f6-a111-4142-a4f7-611586e05f52
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00001E1E"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications/1af64286-2263-4408-b33c-6c333904fbe5
+  response:
+    body:
+      string: '{"error":{"code":"Request_ResourceNotFound","message":"Resource ''1af64286-2263-4408-b33c-6c333904fbe5''
+        does not exist or one of its queried reference-property objects are not present.","innerError":{"date":"2022-04-26T13:32:58","request-id":"f7641ef7-719d-428f-ac1d-76faf4a95e50","client-request-id":"f7641ef7-719d-428f-ac1d-76faf4a95e50"}}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '341'
+      content-type:
+      - application/json
+      date:
+      - Tue, 26 Apr 2022 13:32:57 GMT
+      request-id:
+      - f7641ef7-719d-428f-ac1d-76faf4a95e50
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00001E1E"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app create
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --display-name
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=startswith(displayName,'azure-cli-test000002')
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '87'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:32:58 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - 0e193717-a1a0-4d81-b4ac-ade13e8e064a
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000022D9"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"displayName": "azure-cli-test000002", "keyCredentials": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app create
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '61'
+      Content-Type:
+      - application/json
+      ParameterSetName:
+      - --display-name
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: POST
+    uri: https://graph.microsoft.com/v1.0/applications
+  response:
+    body:
+      string: '{"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#applications/$entity",
+        "id": "20365591-9c76-4843-93e2-25586c2c495b", "deletedDateTime": null, "appId":
+        "122c4af9-47d6-4274-8b6d-95a3f0652b5c", "applicationTemplateId": null, "disabledByMicrosoftStatus":
+        null, "createdDateTime": "2022-04-26T13:32:59.8031013Z", "displayName": "azure-cli-test000002",
+        "description": null, "groupMembershipClaims": null, "identifierUris": [],
+        "isDeviceOnlyAuthSupported": null, "isFallbackPublicClient": null, "notes":
+        null, "publisherDomain": "AzureSDKTeam.onmicrosoft.com", "serviceManagementReference":
+        null, "signInAudience": "AzureADandPersonalMicrosoftAccount", "tags": [],
+        "tokenEncryptionKeyId": null, "defaultRedirectUri": null, "certification":
+        null, "optionalClaims": null, "addIns": [], "api": {"acceptMappedClaims":
+        null, "knownClientApplications": [], "requestedAccessTokenVersion": 2, "oauth2PermissionScopes":
+        [], "preAuthorizedApplications": []}, "appRoles": [], "info": {"logoUrl":
+        null, "marketingUrl": null, "privacyStatementUrl": null, "supportUrl": null,
+        "termsOfServiceUrl": null}, "keyCredentials": [], "parentalControlSettings":
+        {"countriesBlockedForMinors": [], "legalAgeGroupRule": "Allow"}, "passwordCredentials":
+        [], "publicClient": {"redirectUris": []}, "requiredResourceAccess": [], "verifiedPublisher":
+        {"displayName": null, "verifiedPublisherId": null, "addedDateTime": null},
+        "web": {"homePageUrl": null, "logoutUrl": null, "redirectUris": [], "implicitGrantSettings":
+        {"enableAccessTokenIssuance": false, "enableIdTokenIssuance": false}}, "spa":
+        {"redirectUris": []}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '1595'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:00 GMT
+      location:
+      - https://graph.microsoft.com/v2/54826b22-38d6-4fb2-bad9-b7b93a3e9c5a/directoryObjects/20365591-9c76-4843-93e2-25586c2c495b/Microsoft.DirectoryServices.Application
+      odata-version:
+      - '4.0'
+      request-id:
+      - 6bc95065-8568-490c-ae29-44b4de2d648b
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00001E1F"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 201
+      message: Created
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app update
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id --display-name --identifier-uris --is-fallback-public-client --web-home-page-url
+        --web-redirect-uris --enable-access-token-issuance --enable-id-token-issuance
+        --key-value --public-client-redirect-uris --app-roles --optional-claims --required-resource-accesses
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'122c4af9-47d6-4274-8b6d-95a3f0652b5c'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[{"id":"20365591-9c76-4843-93e2-25586c2c495b","deletedDateTime":null,"appId":"122c4af9-47d6-4274-8b6d-95a3f0652b5c","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:59Z","displayName":"azure-cli-test000002","description":null,"groupMembershipClaims":null,"identifierUris":[],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":null,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADandPersonalMicrosoftAccount","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"optionalClaims":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":2,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[],"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":[]},"requiredResourceAccess":[],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":null,"logoutUrl":null,"redirectUris":[],"implicitGrantSettings":{"enableAccessTokenIssuance":false,"enableIdTokenIssuance":false}},"spa":{"redirectUris":[]}}]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '1486'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:00 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - c6cc7ac8-0d56-437b-9cfa-daafba156201
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000018C7"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app update
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id --display-name --identifier-uris --is-fallback-public-client --web-home-page-url
+        --web-redirect-uris --enable-access-token-issuance --enable-id-token-issuance
+        --key-value --public-client-redirect-uris --app-roles --optional-claims --required-resource-accesses
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications/20365591-9c76-4843-93e2-25586c2c495b
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications/$entity","id":"20365591-9c76-4843-93e2-25586c2c495b","deletedDateTime":null,"appId":"122c4af9-47d6-4274-8b6d-95a3f0652b5c","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:59Z","displayName":"azure-cli-test000002","description":null,"groupMembershipClaims":null,"identifierUris":[],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":null,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADandPersonalMicrosoftAccount","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"optionalClaims":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":2,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[],"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":[]},"requiredResourceAccess":[],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":null,"logoutUrl":null,"redirectUris":[],"implicitGrantSettings":{"enableAccessTokenIssuance":false,"enableIdTokenIssuance":false}},"spa":{"redirectUris":[]}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '1482'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:01 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - c0480e3c-47d2-422a-9c5b-c1fcaaa47b12
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00001643"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app update
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id --display-name --identifier-uris --is-fallback-public-client --web-home-page-url
+        --web-redirect-uris --enable-access-token-issuance --enable-id-token-issuance
+        --key-value --public-client-redirect-uris --app-roles --optional-claims --required-resource-accesses
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'122c4af9-47d6-4274-8b6d-95a3f0652b5c'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[{"id":"20365591-9c76-4843-93e2-25586c2c495b","deletedDateTime":null,"appId":"122c4af9-47d6-4274-8b6d-95a3f0652b5c","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:59Z","displayName":"azure-cli-test000002","description":null,"groupMembershipClaims":null,"identifierUris":[],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":null,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADandPersonalMicrosoftAccount","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"optionalClaims":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":2,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[],"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":[]},"requiredResourceAccess":[],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":null,"logoutUrl":null,"redirectUris":[],"implicitGrantSettings":{"enableAccessTokenIssuance":false,"enableIdTokenIssuance":false}},"spa":{"redirectUris":[]}}]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '1486'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:01 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - d374b1f1-2bfd-43a8-bff8-9f96848f4d17
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00000BC1"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"displayName": "azure-cli-test000003", "identifierUris": ["api://azure-cli-test000003"],
+      "isFallbackPublicClient": true, "keyCredentials": [{"@odata.type": "#microsoft.graph.keyCredential",
+      "displayName": null, "endDateTime": "2023-04-25T13:33:02Z", "key": "MIIDazCCAlOgAwIBAgIUIp5vybhHfKN+ZKL28AntYKhlKXkwDQYJKoZIhvcNAQELBQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMDA3MjIwNzE3NDdaFw00NzEyMDgwNzE3NDdaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDMa00H+/p4RP4Eo//1J81Wowo4y1SKOJHbJ6T/lZ735FzFX52gdQ/7HalJOwQdbha78RPGA7bXxEmyEo+q3w+IMYzrqboX5S9yf0v1DZvja/VEMtUsq79d7NUUEd+smkuqDxDHFIkMeMM8cXy6tc+TPbc28BkQQiKbzOEZDwy4HPd7FCqCwwcZtgxfxFQx5A2DkAXtT53zQD8k1zY4UQWhkKDcgvINzQfYxJmUbXqH27MuJuejhpWLjmwEFCQtMJMrEv44YmlDzmL64iN5HFckO65ikV9fe9g9EcR5acSY2bsO8WyFYzTffVXFpFF011Vi4d/U0h4wSwj5KLMYMHkfAgMBAAGjUzBRMB0GA1UdDgQWBBQxgpSKG7fwIHEopaRA10GB8Z8SOTAfBgNVHSMEGDAWgBQxgpSKG7fwIHEopaRA10GB8Z8SOTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAtI5vbHGxVV3qRtd9PEFe9dUb9Yv9YIa5RUd5l795cgr6qyELfg3xTPZbNf1oUHpGXNCfm1uqNTorIKOIEoTpA+STVwST/xcqzB6VjS31I/5IIrdK2NQenM+0DVJa+yGhX+zI3+X3cO2YbyLSKBYqdMsqgnMS/ZC0NnrvigHgq2SC4Vzg8yz5rorjvLJ6ndehtoWOtdCJKUTPihNh4e+GM2A7UNKdt5WKCiS/n/lShvm+8JEG2lXQmmxR6DOjdDyC4/6tf7Ln7YoZZ0q6ICp04oMF6bvgGosdOkQATW4X97EmcfIBfHPX2w/Xn47np2rZrlBMWCjI8gO6W8YQMu7AH",
+      "keyId": "c4f89552-315c-4b9f-929f-9a0738ae4b87", "startDateTime": "2022-04-26T13:33:02Z",
+      "type": "AsymmetricX509Cert", "usage": "Verify"}], "web": {"homePageUrl": "https://myapp.com/",
+      "redirectUris": ["http://localhost/webtest1", "http://localhost/webtest2"],
+      "implicitGrantSettings": {"enableIdTokenIssuance": true, "enableAccessTokenIssuance":
+      true}}, "publicClient": {"redirectUris": ["http://localhost/publicclienttest1",
+      "http://localhost/publicclienttest2"]}, "appRoles": [{"allowedMemberTypes":
+      ["User"], "displayName": "Writer", "id": "d1c2ade8-0000-0000-0000-6d06b947c66f",
+      "isEnabled": true, "description": "Writers Have the ability to create tasks.",
+      "value": "Writer"}, {"allowedMemberTypes": ["Application"], "displayName": "ConsumerApps",
+      "id": "47fbb575-0000-0000-0000-0f7a6c30beac", "isEnabled": true, "description":
+      "Consumer apps have access to the consumer data.", "value": "Consumer"}], "optionalClaims":
+      {"idToken": [{"name": "auth_time", "essential": false}], "accessToken": [{"name":
+      "ipaddr", "essential": false}], "saml2Token": [{"name": "upn", "essential":
+      false}, {"name": "extension_ab603c56068041afb2f6832e2a17e237_skypeId", "source":
+      "user", "essential": false}]}, "requiredResourceAccess": [{"resourceAccess":
+      [{"id": "41094075-9dad-400e-a0bd-54e686782033", "type": "Scope"}], "resourceAppId":
+      "797f4846-ba00-4fd7-ba43-dac1f8f63013"}, {"resourceAccess": [{"id": "c79f8feb-a9db-4090-85f9-90d820caa0eb",
+      "type": "Scope"}, {"id": "18a4783c-866b-4cc7-a460-3d5e5662c884", "type": "Role"}],
+      "resourceAppId": "00000003-0000-0000-c000-000000000000"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app update
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3010'
+      Content-Type:
+      - application/json
+      ParameterSetName:
+      - --id --display-name --identifier-uris --is-fallback-public-client --web-home-page-url
+        --web-redirect-uris --enable-access-token-issuance --enable-id-token-issuance
+        --key-value --public-client-redirect-uris --app-roles --optional-claims --required-resource-accesses
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: PATCH
+    uri: https://graph.microsoft.com/v1.0/applications/20365591-9c76-4843-93e2-25586c2c495b
+  response:
+    body:
+      string: ''
+    headers:
+      cache-control:
+      - no-cache
+      date:
+      - Tue, 26 Apr 2022 13:33:04 GMT
+      request-id:
+      - e793fb51-e094-4502-b963-a99a9cab1cd7
+      strict-transport-security:
+      - max-age=31536000
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF0000163A"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'122c4af9-47d6-4274-8b6d-95a3f0652b5c'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[{"id":"20365591-9c76-4843-93e2-25586c2c495b","deletedDateTime":null,"appId":"122c4af9-47d6-4274-8b6d-95a3f0652b5c","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:59Z","displayName":"azure-cli-test000003","description":null,"groupMembershipClaims":null,"identifierUris":["api://azure-cli-test000003"],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":true,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADandPersonalMicrosoftAccount","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":2,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[{"allowedMemberTypes":["Application"],"description":"Consumer
+        apps have access to the consumer data.","displayName":"ConsumerApps","id":"47fbb575-0000-0000-0000-0f7a6c30beac","isEnabled":true,"origin":"Application","value":"Consumer"},{"allowedMemberTypes":["User"],"description":"Writers
+        Have the ability to create tasks.","displayName":"Writer","id":"d1c2ade8-0000-0000-0000-6d06b947c66f","isEnabled":true,"origin":"Application","value":"Writer"}],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[{"customKeyIdentifier":"7AB4DD9219E5E03ECC025136572DFAA262EC85CB","displayName":"O=Internet
+        Widgits Pty Ltd, S=Some-State, C=AU","endDateTime":"2023-04-25T13:33:02Z","key":null,"keyId":"c4f89552-315c-4b9f-929f-9a0738ae4b87","startDateTime":"2022-04-26T13:33:02Z","type":"AsymmetricX509Cert","usage":"Verify"}],"optionalClaims":{"accessToken":[{"additionalProperties":[],"essential":false,"name":"ipaddr","source":null}],"idToken":[{"additionalProperties":[],"essential":false,"name":"auth_time","source":null}],"saml2Token":[{"additionalProperties":[],"essential":false,"name":"upn","source":null},{"additionalProperties":[],"essential":false,"name":"extension_ab603c56068041afb2f6832e2a17e237_skypeId","source":"user"}]},"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":["http://localhost/publicclienttest2","http://localhost/publicclienttest1"]},"requiredResourceAccess":[{"resourceAppId":"00000003-0000-0000-c000-000000000000","resourceAccess":[{"id":"c79f8feb-a9db-4090-85f9-90d820caa0eb","type":"Scope"},{"id":"18a4783c-866b-4cc7-a460-3d5e5662c884","type":"Role"}]},{"resourceAppId":"797f4846-ba00-4fd7-ba43-dac1f8f63013","resourceAccess":[{"id":"41094075-9dad-400e-a0bd-54e686782033","type":"Scope"}]}],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":"https://myapp.com/","logoutUrl":null,"redirectUris":["http://localhost/webtest2","http://localhost/webtest1"],"implicitGrantSettings":{"enableAccessTokenIssuance":true,"enableIdTokenIssuance":true}},"spa":{"redirectUris":[]}}]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '3135'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:04 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - ede5c663-8c4d-40be-a746-74f5cd51d1a0
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00000BC1"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications/20365591-9c76-4843-93e2-25586c2c495b
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications/$entity","id":"20365591-9c76-4843-93e2-25586c2c495b","deletedDateTime":null,"appId":"122c4af9-47d6-4274-8b6d-95a3f0652b5c","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:59Z","displayName":"azure-cli-test000003","description":null,"groupMembershipClaims":null,"identifierUris":["api://azure-cli-test000003"],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":true,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADandPersonalMicrosoftAccount","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":2,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[{"allowedMemberTypes":["Application"],"description":"Consumer
+        apps have access to the consumer data.","displayName":"ConsumerApps","id":"47fbb575-0000-0000-0000-0f7a6c30beac","isEnabled":true,"origin":"Application","value":"Consumer"},{"allowedMemberTypes":["User"],"description":"Writers
+        Have the ability to create tasks.","displayName":"Writer","id":"d1c2ade8-0000-0000-0000-6d06b947c66f","isEnabled":true,"origin":"Application","value":"Writer"}],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[{"customKeyIdentifier":"7AB4DD9219E5E03ECC025136572DFAA262EC85CB","displayName":"O=Internet
+        Widgits Pty Ltd, S=Some-State, C=AU","endDateTime":"2023-04-25T13:33:02Z","key":null,"keyId":"c4f89552-315c-4b9f-929f-9a0738ae4b87","startDateTime":"2022-04-26T13:33:02Z","type":"AsymmetricX509Cert","usage":"Verify"}],"optionalClaims":{"accessToken":[{"additionalProperties":[],"essential":false,"name":"ipaddr","source":null}],"idToken":[{"additionalProperties":[],"essential":false,"name":"auth_time","source":null}],"saml2Token":[{"additionalProperties":[],"essential":false,"name":"upn","source":null},{"additionalProperties":[],"essential":false,"name":"extension_ab603c56068041afb2f6832e2a17e237_skypeId","source":"user"}]},"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":["http://localhost/publicclienttest2","http://localhost/publicclienttest1"]},"requiredResourceAccess":[{"resourceAppId":"00000003-0000-0000-c000-000000000000","resourceAccess":[{"id":"c79f8feb-a9db-4090-85f9-90d820caa0eb","type":"Scope"},{"id":"18a4783c-866b-4cc7-a460-3d5e5662c884","type":"Role"}]},{"resourceAppId":"797f4846-ba00-4fd7-ba43-dac1f8f63013","resourceAccess":[{"id":"41094075-9dad-400e-a0bd-54e686782033","type":"Scope"}]}],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":"https://myapp.com/","logoutUrl":null,"redirectUris":["http://localhost/webtest2","http://localhost/webtest1"],"implicitGrantSettings":{"enableAccessTokenIssuance":true,"enableIdTokenIssuance":true}},"spa":{"redirectUris":[]}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '3131'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:05 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - e090321c-a156-47f1-b041-144175828ad7
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00000BCC"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app delete
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'122c4af9-47d6-4274-8b6d-95a3f0652b5c'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[{"id":"20365591-9c76-4843-93e2-25586c2c495b","deletedDateTime":null,"appId":"122c4af9-47d6-4274-8b6d-95a3f0652b5c","applicationTemplateId":null,"disabledByMicrosoftStatus":null,"createdDateTime":"2022-04-26T13:32:59Z","displayName":"azure-cli-test000003","description":null,"groupMembershipClaims":null,"identifierUris":["api://azure-cli-test000003"],"isDeviceOnlyAuthSupported":null,"isFallbackPublicClient":true,"notes":null,"publisherDomain":"AzureSDKTeam.onmicrosoft.com","serviceManagementReference":null,"signInAudience":"AzureADandPersonalMicrosoftAccount","tags":[],"tokenEncryptionKeyId":null,"defaultRedirectUri":null,"certification":null,"addIns":[],"api":{"acceptMappedClaims":null,"knownClientApplications":[],"requestedAccessTokenVersion":2,"oauth2PermissionScopes":[],"preAuthorizedApplications":[]},"appRoles":[{"allowedMemberTypes":["Application"],"description":"Consumer
+        apps have access to the consumer data.","displayName":"ConsumerApps","id":"47fbb575-0000-0000-0000-0f7a6c30beac","isEnabled":true,"origin":"Application","value":"Consumer"},{"allowedMemberTypes":["User"],"description":"Writers
+        Have the ability to create tasks.","displayName":"Writer","id":"d1c2ade8-0000-0000-0000-6d06b947c66f","isEnabled":true,"origin":"Application","value":"Writer"}],"info":{"logoUrl":null,"marketingUrl":null,"privacyStatementUrl":null,"supportUrl":null,"termsOfServiceUrl":null},"keyCredentials":[{"customKeyIdentifier":"7AB4DD9219E5E03ECC025136572DFAA262EC85CB","displayName":"O=Internet
+        Widgits Pty Ltd, S=Some-State, C=AU","endDateTime":"2023-04-25T13:33:02Z","key":null,"keyId":"c4f89552-315c-4b9f-929f-9a0738ae4b87","startDateTime":"2022-04-26T13:33:02Z","type":"AsymmetricX509Cert","usage":"Verify"}],"optionalClaims":{"accessToken":[{"additionalProperties":[],"essential":false,"name":"ipaddr","source":null}],"idToken":[{"additionalProperties":[],"essential":false,"name":"auth_time","source":null}],"saml2Token":[{"additionalProperties":[],"essential":false,"name":"upn","source":null},{"additionalProperties":[],"essential":false,"name":"extension_ab603c56068041afb2f6832e2a17e237_skypeId","source":"user"}]},"parentalControlSettings":{"countriesBlockedForMinors":[],"legalAgeGroupRule":"Allow"},"passwordCredentials":[],"publicClient":{"redirectUris":["http://localhost/publicclienttest2","http://localhost/publicclienttest1"]},"requiredResourceAccess":[{"resourceAppId":"00000003-0000-0000-c000-000000000000","resourceAccess":[{"id":"c79f8feb-a9db-4090-85f9-90d820caa0eb","type":"Scope"},{"id":"18a4783c-866b-4cc7-a460-3d5e5662c884","type":"Role"}]},{"resourceAppId":"797f4846-ba00-4fd7-ba43-dac1f8f63013","resourceAccess":[{"id":"41094075-9dad-400e-a0bd-54e686782033","type":"Scope"}]}],"verifiedPublisher":{"displayName":null,"verifiedPublisherId":null,"addedDateTime":null},"web":{"homePageUrl":"https://myapp.com/","logoutUrl":null,"redirectUris":["http://localhost/webtest2","http://localhost/webtest1"],"implicitGrantSettings":{"enableAccessTokenIssuance":true,"enableIdTokenIssuance":true}},"spa":{"redirectUris":[]}}]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '3135'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:06 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - 52d584e1-ed93-4ae4-aee4-3b80d378b6a5
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000022D3"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app delete
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: DELETE
+    uri: https://graph.microsoft.com/v1.0/applications/20365591-9c76-4843-93e2-25586c2c495b
+  response:
+    body:
+      string: ''
+    headers:
+      cache-control:
+      - no-cache
+      date:
+      - Tue, 26 Apr 2022 13:33:07 GMT
+      request-id:
+      - d638bab9-1190-4e8f-8031-8bc3da9dfb6e
+      strict-transport-security:
+      - max-age=31536000
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000022D9"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'122c4af9-47d6-4274-8b6d-95a3f0652b5c'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '87'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:08 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - 10b28d80-d219-464b-be08-29ee1344f88c
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000022D4"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications/122c4af9-47d6-4274-8b6d-95a3f0652b5c
+  response:
+    body:
+      string: '{"error":{"code":"Request_ResourceNotFound","message":"Resource ''122c4af9-47d6-4274-8b6d-95a3f0652b5c''
+        does not exist or one of its queried reference-property objects are not present.","innerError":{"date":"2022-04-26T13:33:09","request-id":"7a557ff7-e2db-4505-a4cd-45d3aa098157","client-request-id":"7a557ff7-e2db-4505-a4cd-45d3aa098157"}}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '341'
+      content-type:
+      - application/json
+      date:
+      - Tue, 26 Apr 2022 13:33:09 GMT
+      request-id:
+      - 7a557ff7-e2db-4505-a4cd-45d3aa098157
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000017E9"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications?$filter=appId%20eq%20'122c4af9-47d6-4274-8b6d-95a3f0652b5c'
+  response:
+    body:
+      string: '{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#applications","value":[]}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '87'
+      content-type:
+      - application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+      date:
+      - Tue, 26 Apr 2022 13:33:09 GMT
+      odata-version:
+      - '4.0'
+      request-id:
+      - 8edbe681-ae64-4cf7-9834-e8f2fa8e0a75
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF000022D5"}}'
+      x-ms-resource-unit:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - ad app show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - --id
+      User-Agent:
+      - python/3.10.4 (Windows-10-10.0.19044-SP0) AZURECLI/2.35.0
+    method: GET
+    uri: https://graph.microsoft.com/v1.0/applications/122c4af9-47d6-4274-8b6d-95a3f0652b5c
+  response:
+    body:
+      string: '{"error":{"code":"Request_ResourceNotFound","message":"Resource ''122c4af9-47d6-4274-8b6d-95a3f0652b5c''
+        does not exist or one of its queried reference-property objects are not present.","innerError":{"date":"2022-04-26T13:33:10","request-id":"b9e81bb0-4320-4637-9b88-1d23df9de215","client-request-id":"b9e81bb0-4320-4637-9b88-1d23df9de215"}}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '341'
+      content-type:
+      - application/json
+      date:
+      - Tue, 26 Apr 2022 13:33:10 GMT
+      request-id:
+      - b9e81bb0-4320-4637-9b88-1d23df9de215
+      strict-transport-security:
+      - max-age=31536000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-ms-ags-diagnostic:
+      - '{"ServerInfo":{"DataCenter":"Southeast Asia","Slice":"E","Ring":"5","ScaleUnit":"001","RoleInstance":"SI2PEPF00000BCF"}}'
+      x-ms-resource-unit:
+      - '1'
+    status:
+      code: 404
+      message: Not Found
+version: 1
