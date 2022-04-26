@@ -14,6 +14,7 @@ from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 from azure.cli.testsdk.scenario_tests.const import MOCKED_TENANT_ID
 from azure.cli.testsdk import ScenarioTest, AADGraphUserReplacer, MOCKED_USER_NAME
 from knack.util import CLIError
+from azure.cli.testsdk import ScenarioTest, LiveScenarioTest, ResourceGroupPreparer, KeyVaultPreparer
 
 
 # This test example is from
@@ -120,6 +121,7 @@ lBMWCjI8gO6W8YQMu7AH""".replace('\n', '')
 
 
 class GraphScenarioTestBase(ScenarioTest):
+
     def tearDown(self):
         # If self.kwargs contains appId, try best to delete the app.
         for k, v in self.kwargs.items():
@@ -134,6 +136,17 @@ class GraphScenarioTestBase(ScenarioTest):
                 except:
                     pass
         super().tearDown()
+
+    def _create_app(self):
+        self.kwargs['display_name'] = self.create_random_name(prefix='azure-cli-test', length=30)
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+
+    def _create_sp(self):
+        self.kwargs['display_name'] = self.create_random_name(prefix='azure-cli-test', length=30)
+        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        self.cmd('ad sp create --id {app_id}').get_output_in_json()
 
     def _get_signed_in_user(self):
         account_info = self.cmd('account show').get_output_in_json()
@@ -170,16 +183,6 @@ class GraphScenarioTestBase(ScenarioTest):
         self.cmd('ad {object_type} credential reset --id {app_id} --end-date "2100-12-31"')
         self.cmd('ad {object_type} credential list --id {app_id}',
                  checks=self.check('[0].endDateTime', '2100-12-31T00:00:00Z'))
-
-        # Test certificate
-        result = self.cmd('ad {object_type} credential reset --id {app_id} --create-cert',
-                          checks=self.check('appId', '{app_id}')).get_output_in_json()
-        self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
-
-        if sys.platform != 'win32':
-            assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
-
-        os.remove(result['fileWithCertAndPrivateKey'])
 
 
 class ApplicationScenarioTest(GraphScenarioTestBase):
@@ -343,44 +346,8 @@ class ApplicationScenarioTest(GraphScenarioTestBase):
             self.assertEqual(self.cmd('ad app show --id non-exist-identifierUris').exit_code, 3)
             self.assertEqual(self.cmd('ad app show --id 00000000-0000-0000-0000-000000000000').exit_code, 3)
 
-    def test_app_credential_password(self):
-        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
-        self.kwargs.update({
-            'display_name': display_name
-        })
-
-        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
-        self.kwargs['app_id'] = result['appId']
-        self._test_credential('app')
-
-    def test_app_credential_with_cert(self):
-        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
-        self.kwargs.update({
-            'display_name': display_name
-        })
-
-        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
-        self.kwargs['app_id'] = result['appId']
-        self._test_credential('app')
-
-    def test_app_credential_with_with_new_keyvault_cert(self):
-        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
-        self.kwargs.update({
-            'display_name': display_name
-        })
-
-        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
-        self.kwargs['app_id'] = result['appId']
-        self._test_credential('app')
-
-    def test_app_credential_with_existing_kv_cert(self):
-        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
-        self.kwargs.update({
-            'display_name': display_name
-        })
-
-        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
-        self.kwargs['app_id'] = result['appId']
+    def test_app_credential(self):
+        self._create_app()
         self._test_credential('app')
 
     def test_app_owner(self):
@@ -404,7 +371,7 @@ class ApplicationScenarioTest(GraphScenarioTestBase):
 
     @AllowLargeResponse()
     def test_app_permission(self):
-        if not get_signed_in_user(self):
+        if not self._get_signed_in_user():
             return
 
         self.kwargs = {
@@ -553,7 +520,7 @@ class ApplicationScenarioTest(GraphScenarioTestBase):
 
     @AllowLargeResponse()
     def test_app_permission_grant(self):
-        if not get_signed_in_user(self):
+        if not self._get_signed_in_user():
             return  # this test delete users which are beyond a SP's capacity, so quit...
         self.kwargs = {
             'display_name': self.create_random_name('cli-app-', 15),
@@ -675,18 +642,11 @@ class ServicePrincipalScenarioTest(GraphScenarioTestBase):
         self.cmd('ad sp owner list --id {app_id}', checks=self.check('length(@)', 0))
 
     def test_sp_credential(self):
-        display_name = self.create_random_name(prefix='azure-cli-test', length=30)
-        self.kwargs.update({
-            'display_name': display_name
-        })
-
-        result = self.cmd('ad app create --display-name {display_name}').get_output_in_json()
-        self.kwargs['app_id'] = result['appId']
-        self.cmd('ad sp create --id {app_id}').get_output_in_json()
+        self._create_sp()
         self._test_credential('sp')
 
 
-class UserScenarioTest(ScenarioTest):
+class UserScenarioTest(GraphScenarioTestBase):
     def test_user_scenario(self):
         self.kwargs = {
             'user1': self.create_random_name(prefix='graphusertest', length=20),
@@ -748,7 +708,7 @@ class UserScenarioTest(ScenarioTest):
         self.cmd('ad user delete --id {user1_id}')
 
 
-class GroupScenarioTest(ScenarioTest):
+class GroupScenarioTest(GraphScenarioTestBase):
 
     def clean_resource(self, resource, type='group'):
         try:
@@ -762,8 +722,7 @@ class GroupScenarioTest(ScenarioTest):
             pass
 
     def test_group_scenario(self):
-        username = get_signed_in_user(self)
-        if not username:
+        if not self._get_signed_in_user():
             return  # this test delete users which are beyond a SP's capacity, so quit...
 
         domain = 'AzureSDKTeam.onmicrosoft.com'

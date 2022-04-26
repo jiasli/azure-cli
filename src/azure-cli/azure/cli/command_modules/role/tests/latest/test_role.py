@@ -95,6 +95,15 @@ class RbacSPSecretScenarioTest(RoleScenarioTestBase):
 
             os.remove(result['fileWithCertAndPrivateKey'])
 
+            result = self.cmd('ad app credential reset --id {app_id} --create-cert',
+                              checks=self.check('name', '{app_id}')).get_output_in_json()
+            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
+
+            if sys.platform != 'win32':
+                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
+
+            os.remove(result['fileWithCertAndPrivateKey'])
+
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_new_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-new-kv')
     def test_create_for_rbac_with_new_kv_cert(self, resource_group, key_vault):
@@ -121,7 +130,7 @@ class RbacSPSecretScenarioTest(RoleScenarioTestBase):
                 else:
                     raise
             cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-            self.cmd('ad sp credential reset -n {app_id} --create-cert --keyvault {kv} --cert {cert}')
+            self.cmd('ad app credential reset --id {app_id} --create-cert --keyvault {kv} --cert {cert}')
             cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
             self.assertTrue(cer1 != cer2)
 
@@ -150,7 +159,7 @@ class RbacSPSecretScenarioTest(RoleScenarioTestBase):
                 result = self.cmd('ad sp create-for-rbac -n {display_name} --keyvault {kv} '
                                   '--cert {cert}').get_output_in_json()
                 self.kwargs['app_id'] = result['appId']
-            self.cmd('ad sp credential reset -n {app_id} --keyvault {kv} --cert {cert}')
+            self.cmd('ad app credential reset --id {app_id} --keyvault {kv} --cert {cert}')
         finally:
             try:
                 self.cmd('ad app delete --id {app_id}')
@@ -165,7 +174,7 @@ class RbacSPSecretScenarioTest(RoleScenarioTestBase):
                 result = self.cmd('ad sp create-for-rbac --keyvault {kv} '
                                   '--cert {cert} -n {display_name2}').get_output_in_json()
                 self.kwargs['app_id2'] = result['appId']
-            self.cmd('ad sp credential reset -n {app_id2} --keyvault {kv} --cert {cert}')
+            self.cmd('ad app credential reset --id {app_id2} --keyvault {kv} --cert {cert}')
         finally:
             try:
                 self.cmd('ad app delete --id {app_id2}')
