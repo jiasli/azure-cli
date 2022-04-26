@@ -27,18 +27,122 @@ class RoleScenarioTestBase(GraphScenarioTestBase):
         return not self._get_signed_in_user()
 
 
-class RbacSPSecretScenarioTest(RoleScenarioTestBase):
+class CreateForRbacScenarioTest(RoleScenarioTestBase):
 
-    def test_create_for_rbac_with_secret_no_assignment(self):
+    def test_create_for_rbac_password(self):
         self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
         result = self.cmd('ad sp create-for-rbac --display-name {display_name}',
                           checks=self.check('displayName', '{display_name}')).get_output_in_json()
         self.kwargs['app_id'] = result['appId']
         self.cmd('role assignment list --assignee {app_id} --all', checks=self.check('length(@)', 0))
 
+    def test_create_for_rbac_create_cert(self):
+
+        self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
+
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            result = self.cmd('ad sp create-for-rbac -n {display_name} --create-cert',
+                              checks=self.check('displayName', '{display_name}')).get_output_in_json()
+            self.kwargs['app_id'] = result['appId']
+
+            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
+
+            # On Linux or MacOS, check the cert file is a regular file (S_IFREG 0100000) with permission 600
+            # https://manpages.ubuntu.com/manpages/focal/man7/inode.7.html
+            # Windows doesn't have the Linux permission concept.
+            if sys.platform != 'win32':
+                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
+
+            os.remove(result['fileWithCertAndPrivateKey'])
+
+            result = self.cmd('ad app credential reset --id {app_id} --create-cert').get_output_in_json()
+            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
+
+            if sys.platform != 'win32':
+                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
+
+            os.remove(result['fileWithCertAndPrivateKey'])
+
+    @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_new_cert')
+    @KeyVaultPreparer(name_prefix='test-rbac-new-kv')
+    def test_create_for_rbac_create_cert_keyvault(self, resource_group, key_vault):
+        KeyVaultErrorException = get_sdk(self.cli_ctx, ResourceType.DATA_KEYVAULT, 'models.key_vault_error#KeyVaultErrorException')
+        subscription_id = self.get_subscription_id()
+
+        self.kwargs.update({
+            'display_name': resource_group,
+            'sub': subscription_id,
+            'scope': '/subscriptions/{}'.format(subscription_id),
+            'cert': 'cert1',
+            'kv': key_vault
+        })
+
+        time.sleep(5)  # to avoid 504(too many requests) on a newly created vault
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            try:
+                result = self.cmd('ad sp create-for-rbac --create-cert '
+                                  '--keyvault {kv} --cert {cert} -n {display_name}').get_output_in_json()
+                self.kwargs['app_id'] = result['appId']
+            except KeyVaultErrorException:
+                if not self.is_live and not self.in_recording:
+                    pass  # temporary workaround for keyvault challenge handling was ignored under playback
+                else:
+                    raise
+            cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
+            self.cmd('ad app credential reset --id {app_id} --create-cert --keyvault {kv} --cert {cert}')
+            cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
+            self.assertTrue(cer1 != cer2)
+
+    @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_existing_cert')
+    @KeyVaultPreparer(name_prefix='test-rbac-exist-kv')
+    def test_create_for_rbac_use_cert_keyvault(self, resource_group, key_vault):
+
+        import time
+        subscription_id = self.get_subscription_id()
+
+        self.kwargs.update({
+            'display_name': resource_group,
+            'display_name2': resource_group + '2',
+            'sub': subscription_id,
+            'scope': '/subscriptions/{}'.format(subscription_id),
+            'cert': 'cert1',
+            'kv': key_vault
+        })
+        time.sleep(5)  # to avoid 504(too many requests) on a newly created vault
+
+        # test with valid length cert
+        try:
+            self.kwargs['policy'] = self.cmd('keyvault certificate get-default-policy').get_output_in_json()
+            self.cmd('keyvault certificate create --vault-name {kv} -n {cert} -p "{policy}" --validity 24')
+            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+                result = self.cmd('ad sp create-for-rbac -n {display_name} --keyvault {kv} '
+                                  '--cert {cert}').get_output_in_json()
+                self.kwargs['app_id'] = result['appId']
+            self.cmd('ad app credential reset --id {app_id} --keyvault {kv} --cert {cert}')
+        finally:
+            try:
+                self.cmd('ad app delete --id {app_id}')
+            except:
+                # Mute the exception, otherwise the exception thrown in the `try` clause will be hidden
+                pass
+
+        # test with cert that has too short a validity
+        try:
+            self.cmd('keyvault certificate create --vault-name {kv} -n {cert} -p "{policy}" --validity 6')
+            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+                result = self.cmd('ad sp create-for-rbac --keyvault {kv} '
+                                  '--cert {cert} -n {display_name2}').get_output_in_json()
+                self.kwargs['app_id2'] = result['appId']
+            self.cmd('ad app credential reset --id {app_id2} --keyvault {kv} --cert {cert}')
+        finally:
+            try:
+                self.cmd('ad app delete --id {app_id2}')
+            except:
+                pass
+
     @AllowLargeResponse()
     @ResourceGroupPreparer(name_prefix='cli_sp_create_for_rbac')
-    def test_create_for_rbac_with_secret_with_assignment(self, resource_group):
+    def test_create_for_rbac_with_password_with_assignment(self, resource_group):
 
         subscription_id = self.get_subscription_id()
         self.kwargs.update({
@@ -75,102 +179,6 @@ class RbacSPSecretScenarioTest(RoleScenarioTestBase):
 
         with self.assertRaisesRegex(ArgumentUsageError, 'both'):
             self.cmd('ad sp create-for-rbac --role {role}')
-
-    def test_create_for_rbac_with_cert_no_assignment(self):
-
-        self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
-
-        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-            result = self.cmd('ad sp create-for-rbac -n {display_name} --create-cert',
-                              checks=self.check('displayName', '{display_name}')).get_output_in_json()
-            self.kwargs['app_id'] = result['appId']
-
-            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
-
-            # On Linux or MacOS, check the cert file is a regular file (S_IFREG 0100000) with permission 600
-            # https://manpages.ubuntu.com/manpages/focal/man7/inode.7.html
-            # Windows doesn't have the Linux permission concept.
-            if sys.platform != 'win32':
-                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
-
-            os.remove(result['fileWithCertAndPrivateKey'])
-
-    @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_new_cert')
-    @KeyVaultPreparer(name_prefix='test-rbac-new-kv')
-    def test_create_for_rbac_with_new_kv_cert(self, resource_group, key_vault):
-        KeyVaultErrorException = get_sdk(self.cli_ctx, ResourceType.DATA_KEYVAULT, 'models.key_vault_error#KeyVaultErrorException')
-        subscription_id = self.get_subscription_id()
-
-        self.kwargs.update({
-            'display_name': resource_group,
-            'sub': subscription_id,
-            'scope': '/subscriptions/{}'.format(subscription_id),
-            'cert': 'cert1',
-            'kv': key_vault
-        })
-
-        time.sleep(5)  # to avoid 504(too many requests) on a newly created vault
-        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-            try:
-                result = self.cmd('ad sp create-for-rbac --create-cert '
-                                  '--keyvault {kv} --cert {cert} -n {display_name}').get_output_in_json()
-                self.kwargs['app_id'] = result['appId']
-            except KeyVaultErrorException:
-                if not self.is_live and not self.in_recording:
-                    pass  # temporary workaround for keyvault challenge handling was ignored under playback
-                else:
-                    raise
-            cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-            self.cmd('ad sp credential reset -n {app_id} --create-cert --keyvault {kv} --cert {cert}')
-            cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-            self.assertTrue(cer1 != cer2)
-
-    @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_existing_cert')
-    @KeyVaultPreparer(name_prefix='test-rbac-exist-kv')
-    def test_create_for_rbac_with_existing_kv_cert(self, resource_group, key_vault):
-
-        import time
-        subscription_id = self.get_subscription_id()
-
-        self.kwargs.update({
-            'display_name': resource_group,
-            'display_name2': resource_group + '2',
-            'sub': subscription_id,
-            'scope': '/subscriptions/{}'.format(subscription_id),
-            'cert': 'cert1',
-            'kv': key_vault
-        })
-        time.sleep(5)  # to avoid 504(too many requests) on a newly created vault
-
-        # test with valid length cert
-        try:
-            self.kwargs['policy'] = self.cmd('keyvault certificate get-default-policy').get_output_in_json()
-            self.cmd('keyvault certificate create --vault-name {kv} -n {cert} -p "{policy}" --validity 24')
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac -n {display_name} --keyvault {kv} '
-                                  '--cert {cert}').get_output_in_json()
-                self.kwargs['app_id'] = result['appId']
-            self.cmd('ad sp credential reset -n {app_id} --keyvault {kv} --cert {cert}')
-        finally:
-            try:
-                self.cmd('ad app delete --id {app_id}')
-            except:
-                # Mute the exception, otherwise the exception thrown in the `try` clause will be hidden
-                pass
-
-        # test with cert that has too short a validity
-        try:
-            self.cmd('keyvault certificate create --vault-name {kv} -n {cert} -p "{policy}" --validity 6')
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac --keyvault {kv} '
-                                  '--cert {cert} -n {display_name2}').get_output_in_json()
-                self.kwargs['app_id2'] = result['appId']
-            self.cmd('ad sp credential reset -n {app_id2} --keyvault {kv} --cert {cert}')
-        finally:
-            try:
-                self.cmd('ad app delete --id {app_id2}')
-            except:
-                pass
 
 
 class RoleCreateScenarioTest(RoleScenarioTestBase):
