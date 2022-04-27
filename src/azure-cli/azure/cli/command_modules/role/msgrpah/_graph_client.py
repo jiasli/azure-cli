@@ -7,6 +7,8 @@ import json
 from azure.cli.core._profile import Profile
 from azure.cli.core.util import send_raw_request
 from azure.cli.core.auth.util import resource_to_scopes
+from azure.cli.core.azclierror import AzCLIError
+from knack.util import CLIError
 
 
 class GraphClient:
@@ -31,7 +33,11 @@ class GraphClient:
         is_list_result = False
 
         while True:
-            r = send_raw_request(self.cli_ctx, method, url, resource=self.resource, uri_parameters=param, body=body)
+            try:
+                r = send_raw_request(self.cli_ctx, method, url, resource=self.resource, uri_parameters=param, body=body)
+            except CLIError as ex:
+                raise GraphError(ex.response.json()['error']['message'], ex.response) from ex
+
             if r.text:
                 dic = r.json()
 
@@ -281,3 +287,9 @@ def _filter_to_query(filter):
     if filter is not None:
         return "?$filter={}".format(filter)
     return ''
+
+
+class GraphError(AzCLIError):
+    def __init__(self, message, response):
+        super().__init__(message)
+        self.response = response

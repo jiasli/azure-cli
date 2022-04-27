@@ -18,24 +18,19 @@ import json
 import os
 import re
 import uuid
-from dateutil.relativedelta import relativedelta
+
 import dateutil.parser
-
-from msrestazure.azure_exceptions import CloudError
-
+from dateutil.relativedelta import relativedelta
 from knack.log import get_logger
 from knack.util import CLIError, todict
+from msrestazure.azure_exceptions import CloudError
 
 from azure.cli.core.profiles import ResourceType
-from azure.graphrbac.models import GraphErrorException
-
 from azure.cli.core.util import get_file_json, shell_safe_json_parse, is_guid
-
-
 from ._client_factory import _auth_client_factory, _graph_client_factory
-from ._multi_api_adaptor import MultiAPIAdaptor
-from ._graph_client import GraphClient
 from ._graph_objects import application_property_map, user_property_map, group_property_map, set_object_properties
+from ._multi_api_adaptor import MultiAPIAdaptor
+from .msgrpah import GraphError
 
 # ARM RBAC's principalType
 USER = 'User'
@@ -269,7 +264,7 @@ def list_role_assignments(cmd, assignee=None, role=None, resource_group_name=Non
                 if principal_dics.get(worker.get_role_property(i, 'principalId')):
                     worker.set_role_property(i, 'principalName',
                                              principal_dics[worker.get_role_property(i, 'principalId')])
-        except (CloudError, GraphErrorException) as ex:
+        except (CloudError, GraphError) as ex:
             # failure on resolving principal due to graph permission should not fail the whole thing
             logger.info("Failed to resolve graph object information per error '%s'", ex)
 
@@ -317,7 +312,7 @@ def _get_assignment_events(cli_ctx, start_time=None, end_time=None):
     from azure.mgmt.monitor import MonitorManagementClient
     from azure.cli.core.commands.client_factory import get_mgmt_service_client
     client = get_mgmt_service_client(cli_ctx, MonitorManagementClient)
-
+    DATE_TIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
     if end_time:
         try:
             end_time = datetime.datetime.strptime(end_time, DATE_TIME_FORMAT)
@@ -1006,7 +1001,7 @@ def _create_service_principal(cli_ctx, identifier, resolve_app=True):
             if not result:  # assume we get an object id
                 result = [client.application_get(identifier)]
             app_id = result[0]['appId']
-        except GraphErrorException:
+        except GraphError:
             pass  # fallback to appid (maybe from an external tenant?)
 
     body = {
@@ -1022,7 +1017,6 @@ def show_service_principal(client, identifier):
 
 
 def delete_service_principal(cmd, identifier):
-    from azure.cli.core._profile import Profile
     client = _graph_client_factory(cmd.cli_ctx)
     sp_object_id = _resolve_service_principal(client, identifier)
     client.service_principal_delete(sp_object_id)
@@ -1257,6 +1251,10 @@ def create_service_principal_for_rbac(
             "Please copy %s to a safe place. When you run 'az login', provide the file path in the --password argument",
             cert_file)
         result['fileWithCertAndPrivateKey'] = cert_file
+
+    logger.info('To log in with this service principal, run:\n'
+                f'az login --service-principal --username {app_id} --password {password or cert_file} '
+                f'--tenant {graph_client.tenant}')
     return result
 
 
@@ -1330,7 +1328,7 @@ def _validate_app_dates(app_start_date, app_end_date, cert_start_date, cert_end_
 def _get_signed_in_user_object_id(graph_client):
     try:
         return graph_client.signed_in_user_get()[ID]
-    except GraphErrorException:  # error could be possible if you logged in as a service principal
+    except GraphError:  # error could be possible if you logged in as a service principal
         pass
 
 
@@ -1485,7 +1483,7 @@ def _get_principal_type_from_object_id(cli_ctx, assignee_object_id):
     try:
         result = _get_object_stubs(client, [assignee_object_id])
         if result:
-            return result[0].object_type
+            return _odata_type_to_arm_principal_type(result[0]['@odata.type'])
     except CloudError:
         logger.warning('Failed to query --assignee-principal-type for --assignee-object-id %s by invoking Graph API.',
                        assignee_object_id)
@@ -1516,13 +1514,13 @@ def _resolve_object_id_and_type(cli_ctx, assignee, fallback_to_object_id=False):
         if is_guid(assignee):  # assume an object id, let us verify it
             result = _get_object_stubs(client, [assignee])
             if result:
-                return result[0][ID], ODATA_TYPE_TO_PRINCIPAL_TYPE.get(result[0]['@odata.type'])
+                return result[0][ID], _odata_type_to_arm_principal_type(result[0]['@odata.type'])
 
         # 2+ matches should never happen, so we only check 'no match' here
         raise CLIError("Cannot find user or service principal in graph database for '{assignee}'. "
                        "If the assignee is an appId, make sure the corresponding service principal is created "
                        "with 'az ad sp create --id {assignee}'.".format(assignee=assignee))
-    except (CloudError, GraphErrorException):
+    except (CloudError, GraphError):
         logger.warning('Failed to query %s by invoking Graph API. '
                        'If you don\'t have permission to query Graph API, please '
                        'specify --assignee-object-id and --assignee-principal-type.', assignee)
@@ -1792,6 +1790,10 @@ def _open(location):
     # The 600 seems no-op on Windows, and that is fine.
     return os.open(location, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0o600)
 
+
+def _odata_type_to_arm_principal_type(odata_type):
+    # TODO: Figure out a more generic conversion method
+    return ODATA_TYPE_TO_PRINCIPAL_TYPE.get(odata_type)
 
 def show_signed_in_user(client):
     result = client.signed_in_user_get()
