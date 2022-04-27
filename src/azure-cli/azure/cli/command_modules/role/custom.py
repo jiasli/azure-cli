@@ -1520,7 +1520,7 @@ def _resolve_object_id_and_type(cli_ctx, assignee, fallback_to_object_id=False):
         raise CLIError("Cannot find user or service principal in graph database for '{assignee}'. "
                        "If the assignee is an appId, make sure the corresponding service principal is created "
                        "with 'az ad sp create --id {assignee}'.".format(assignee=assignee))
-    except (CloudError, GraphError):
+    except GraphError:
         logger.warning('Failed to query %s by invoking Graph API. '
                        'If you don\'t have permission to query Graph API, please '
                        'specify --assignee-object-id and --assignee-principal-type.', assignee)
@@ -1794,6 +1794,7 @@ def _open(location):
 def _odata_type_to_arm_principal_type(odata_type):
     # TODO: Figure out a more generic conversion method
     return ODATA_TYPE_TO_PRINCIPAL_TYPE.get(odata_type)
+
 
 def show_signed_in_user(client):
     result = client.signed_in_user_get()

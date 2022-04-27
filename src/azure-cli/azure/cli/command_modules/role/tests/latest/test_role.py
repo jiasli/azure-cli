@@ -341,8 +341,12 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
             self.kwargs['principal_type'] = assignee_principal_type
             # test role assignment on subscription level
 
-            with mock.patch('azure.graphrbac.operations.ObjectsOperations.get_objects_by_object_ids') \
+            from azure.cli.command_modules.role.msgrpah import GraphClient
+            directory_object_get_by_ids = GraphClient.directory_object_get_by_ids
+            with mock.patch('azure.cli.command_modules.role.msgrpah._graph_client.GraphClient.directory_object_get_by_ids',
+                            autospec=True) \
                     as get_objects_by_object_ids_mock:
+                # get_objects_by_object_ids_mock.side_effect = directory_object_get_by_ids
                 if assignee_principal_type:
                     self.cmd(
                         'role assignment create --assignee-object-id {object_id} '
@@ -366,13 +370,13 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
             _test_role_assignment(assignee_object_id)
 
             # test role assignment without principal type and graph call fail
-            from msrestazure.azure_exceptions import CloudError
+            from azure.cli.command_modules.role.msgrpah import GraphError
             import requests
             mock_response = requests.Response()
             mock_response.status_code = 403
-            mock_response.reason = 'Forbidden for url: https://graph.windows.net/.../getObjectsByObjectIds?api-version=1.6'
-            with mock.patch('azure.graphrbac.operations.ObjectsOperations.get_objects_by_object_ids',
-                            side_effect=CloudError(mock_response)):
+            mock_response.reason = 'Forbidden for url: https://...'
+            with mock.patch('azure.cli.command_modules.role.msgrpah._graph_client.GraphClient.directory_object_get_by_ids',
+                            side_effect=GraphError('403', mock_response)):
                 _test_role_assignment(assignee_object_id)
 
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
@@ -395,7 +399,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
                 'ad group create --display-name {group_name} --mail-nickname {group_name}').get_output_in_json()
             time.sleep(10)
             try:
-                _test_role_assignment_graph_call(result['objectId'], 'Group')
+                _test_role_assignment_graph_call(result['id'], 'Group')
             finally:
                 try:
                     self.cmd('ad group delete --group {object_id}')

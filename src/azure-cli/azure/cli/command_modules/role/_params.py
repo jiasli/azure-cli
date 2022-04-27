@@ -6,7 +6,6 @@
 # pylint: disable=line-too-long
 
 from knack.arguments import CLIArgumentType
-from azure.graphrbac.models import ConsentType
 
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.validators import validate_file_or_dict

@@ -289,7 +289,7 @@ def _filter_to_query(filter):
     return ''
 
 
-class GraphError(AzCLIError):
+class GraphError(Exception):
     def __init__(self, message, response):
         super().__init__(message)
         self.response = response
