@@ -672,7 +672,7 @@ def create_application(cmd, client, display_name, identifier_uris=None,
 
     try:
         result = graph_client.application_create(body)
-    except GraphErrorException as ex:
+    except GraphError as ex:
         if 'insufficient privileges' in str(ex).lower():
             link = 'https://docs.microsoft.com/azure/azure-resource-manager/resource-group-create-service-principal-portal'  # pylint: disable=line-too-long
             raise CLIError("Directory permission is needed for the current user to register the application. "
@@ -1533,6 +1533,8 @@ def _resolve_object_id_and_type(cli_ctx, assignee, fallback_to_object_id=False):
 def _get_object_stubs(graph_client, assignees):
     result = []
     assignees = list(assignees)  # callers could pass in a set
+    # Per https://docs.microsoft.com/en-us/graph/api/directoryobject-getbyids
+    # > You can specify up to 1000 IDs.
     for i in range(0, len(assignees), 1000):
         body = {
             "ids": assignees[i:i + 1000],

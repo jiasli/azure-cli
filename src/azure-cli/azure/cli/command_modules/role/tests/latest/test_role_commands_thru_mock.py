@@ -31,6 +31,23 @@ from knack.util import CLIError
 
 # pylint: disable=line-too-long
 
+MOCKED_APP_APP_ID = '00000000-0000-0000-0000-000000000001'
+MOCKED_APP_DISPLAY_NAME = 'mocked_app'
+MOCKED_PASSWORD = 'graph_service_generated_password'
+
+
+MOCKED_APP = {
+    'id': '00000000-0000-0000-0000-000000000002',
+    'appId': MOCKED_APP_APP_ID,
+    'displayName': MOCKED_APP_DISPLAY_NAME,
+    'passwordCredentials': []
+}
+
+MOCKED_SP = {
+    'id': '00000000-0000-0000-0000-000000000003',
+    'appId': MOCKED_APP_APP_ID
+}
+
 
 class TestRoleMocked(unittest.TestCase):
 
@@ -121,36 +138,31 @@ class TestRoleMocked(unittest.TestCase):
         faked_graph_client = mock.MagicMock()
         graph_client_mock.return_value = faked_graph_client
 
-        name = 'mysp'
-        test_app_id = 'app_id_123'
-        app = Application(app_id=test_app_id)
-        faked_graph_client.applications.create.return_value = app
-        sp = ServicePrincipal()
-        faked_graph_client.service_principals.create.return_value = sp
+        faked_graph_client.application_create.return_value = MOCKED_APP
+        faked_graph_client.application_password_add.return_value = {'secretText': MOCKED_PASSWORD}
+        faked_graph_client.service_principal_create.return_value = MOCKED_SP
 
         # action
         cmd = mock.MagicMock()
         cmd.cli_ctx = DummyCli()
-        result = create_service_principal_for_rbac(cmd, name, 12, skip_assignment=True)
+        result = create_service_principal_for_rbac(cmd, MOCKED_APP_DISPLAY_NAME, 12)
 
         # assert
-        self.assertEqual(result['displayName'], name)
-        self.assertEqual(result['appId'], test_app_id)
+        self.assertEqual(result['displayName'], MOCKED_APP_DISPLAY_NAME)
+        self.assertEqual(result['appId'], MOCKED_APP_APP_ID)
+        self.assertEqual(result['password'], MOCKED_PASSWORD)
 
     @mock.patch('azure.cli.command_modules.role.custom._auth_client_factory', autospec=True)
     @mock.patch('azure.cli.command_modules.role.custom._graph_client_factory', autospec=True)
     @mock.patch('azure.cli.command_modules.role.custom.logger', autospec=True)
     def test_create_for_rbac_use_cert_date(self, logger_mock, graph_client_mock, auth_client_mock):
         import OpenSSL.crypto
-        test_app_id = 'app_id_123'
-        app = Application(app_id=test_app_id)
 
         def mock_app_create(parameters):
-            end_date = parameters.key_credentials[0].end_date
-            # sample check the cert's expiration time
-            self.assertEqual(end_date.day, 21)
-            self.assertEqual(end_date.month, 4)
-            return app
+            end_date = parameters['keyCredentials'][0]['endDateTime']
+            # Check the cert's expiration time
+            self.assertEqual(end_date, '2018-04-21T18:27:50Z')
+            return MOCKED_APP
 
         faked_role_client = mock.MagicMock()
         auth_client_mock.return_value = faked_role_client
@@ -163,20 +175,18 @@ class TestRoleMocked(unittest.TestCase):
         with open(cert_file) as f:
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
-        name = 'mysp'
-        faked_graph_client.applications.create.side_effect = mock_app_create
-        sp = ServicePrincipal()
-        faked_graph_client.service_principals.create.return_value = sp
+        faked_graph_client.application_create.side_effect = mock_app_create
+        faked_graph_client.service_principal_create.return_value = MOCKED_SP
 
         # action
         cmd = mock.MagicMock()
         cmd.cli_ctx = DummyCli()
-        result = create_service_principal_for_rbac(cmd, name, cert=cert, years=2, skip_assignment=True)
+        result = create_service_principal_for_rbac(cmd, MOCKED_APP_DISPLAY_NAME, cert=cert, years=2)
 
         # assert
-        self.assertEqual(result['appId'], test_app_id)
+        self.assertEqual(result['appId'], MOCKED_APP_APP_ID)
         self.assertTrue(logger_mock.warning.called)  # we should warn 'years' will be dropped
-        self.assertTrue(faked_graph_client.applications.create.called)
+        self.assertTrue(faked_graph_client.application_create.called)
 
     @mock.patch('azure.cli.command_modules.role.custom._graph_client_factory', autospec=True)
     def test_reset_credentials_password(self, graph_client_mock):
@@ -389,21 +399,28 @@ class TestRoleMocked(unittest.TestCase):
     def test_get_object_stubs(self):
         graph_client = mock.MagicMock()
         assignees = [i for i in range(2001)]
-        graph_client.objects.get_objects_by_object_ids.return_value = []
+        graph_client.directory_object_get_by_ids.return_value = []
 
         # action
         _get_object_stubs(graph_client, assignees)
 
         # assert
         # we get called with right args
-        self.assertEqual(graph_client.objects.get_objects_by_object_ids.call_count, 3)
+        self.assertEqual(graph_client.directory_object_get_by_ids.call_count, 3)
         object_groups = []
         for i in range(0, 2001, 1000):
             object_groups.append([i for i in range(i, min(i + 1000, 2001))])
 
-        for call, group in zip(graph_client.objects.get_objects_by_object_ids.call_args_list, object_groups):
+        # object_groups is
+        # [
+        #   [0, 1, 2, ..., 999],
+        #   [1000, 1001, 1002, ..., 1999],
+        #   [2000]
+        # ]
+
+        for call, group in zip(graph_client.directory_object_get_by_ids.call_args_list, object_groups):
             args, _ = call
-            self.assertEqual(args[0].object_ids, group)
+            self.assertEqual(args[0]['ids'], group)
 
     @mock.patch('azure.cli.command_modules.role.custom._auth_client_factory')
     @mock.patch('azure.cli.command_modules.role.custom._graph_client_factory')

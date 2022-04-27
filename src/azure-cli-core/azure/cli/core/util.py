@@ -130,10 +130,6 @@ def handle_exception(ex):  # pylint: disable=too-many-locals, too-many-statement
     elif isinstance(ex, HTTPError):
         status_code = str(getattr(ex.response, 'status_code', 'Unknown Code'))
         AzCLIErrorType = get_error_type_by_status_code(status_code)
-        r = ex.response
-        error_msg = r.reason
-        if r.text:
-            error_msg += '({})'.format(r.text)
         az_error = AzCLIErrorType(error_msg)
 
     elif isinstance(ex, KeyboardInterrupt):
