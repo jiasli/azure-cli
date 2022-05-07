@@ -762,7 +762,11 @@ def list_applications(cmd, client, app_id=None, display_name=None, identifier_ur
 
 
 def _resolve_application(client, identifier):
-    """Resolve an application and return its id."""
+    """Resolve an application's id (previously known as objectId) from
+      - appId
+      - id (returned as-is)
+      - identifierUris
+    """
     if is_guid(identifier):
         # it is either app id or object id, let us verify
         result = client.application_list(filter="appId eq '{}'".format(identifier))
@@ -821,7 +825,8 @@ def remove_application_owner(client, owner_object_id, identifier):
 
 
 def list_application_owners(client, identifier):
-    return client.application_owner_list(_resolve_application(client, identifier))
+    app_object_id = _resolve_application(client, identifier)
+    return client.application_owner_list(app_object_id)
 
 
 def _get_grant_permissions(client, client_sp_object_id=None, query_filter=None):
@@ -1253,6 +1258,10 @@ def create_service_principal_for_rbac(
 
 
 def _resolve_service_principal(client, identifier):
+    """Resolve a service principal's id (previously known as objectId) from
+      - servicePrincipalNames (contains appId and identifierUris of the corresponding app)
+      - id (returned as-is)
+    """
     """Resolve a service principal and return its id."""
     result = client.service_principal_list(filter="servicePrincipalNames/any(c:c eq '{}')".format(identifier))
     if result:
