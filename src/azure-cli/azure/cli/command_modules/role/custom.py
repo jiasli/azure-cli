@@ -782,8 +782,8 @@ def reset_application_credential(cmd, client, identifier, create_cert=False, cer
     app = show_application(client, identifier)
     if not app:
         raise CLIError("can't find an application matching '{}'".format(identifier))
-    result = _reset_credentials(
-        cmd, app, client.application_password_add, client.application_password_remove,
+    result = _reset_credential(
+        cmd, app, client.application_add_password, client.application_remove_password,
         client.application_patch, create_cert=create_cert, cert=cert, years=years,
         end_date=end_date, keyvault=keyvault, append=append, display_name=display_name)
     result['tenant'] = client.tenant
@@ -792,7 +792,7 @@ def reset_application_credential(cmd, client, identifier, create_cert=False, cer
 
 def delete_application_credential(cmd, client, identifier, key_id, cert=False):
     sp = show_application(client, identifier)
-    _delete_credential(sp, client.application_password_remove, client.application_patch,
+    _delete_credential(sp, client.application_remove_password, client.application_patch,
                        key_id=key_id, cert=cert)
 
 
@@ -800,10 +800,7 @@ def list_application_credentials(cmd, identifier, cert=False):
     # Also see: list_service_principal_credentials
     client = _graph_client_factory(cmd.cli_ctx)
     app = show_application(client, identifier)
-    if cert:
-        return app['keyCredentials']
-    else:
-        return app['passwordCredentials']
+    return _list_credentials(app, cert)
 
 
 def add_application_owner(client, owner_object_id, identifier):
@@ -1072,9 +1069,9 @@ def reset_service_principal_credential(cmd, client, identifier, create_cert=Fals
     sp = show_service_principal(client, identifier)
     if not sp:
         raise CLIError("can't find an service principal matching '{}'".format(identifier))
-    result = _reset_credentials(
+    result = _reset_credential(
         cmd, sp,
-        client.service_principal_password_add, client.service_principal_password_remove,
+        client.service_principal_add_password, client.service_principal_remove_password,
         client.service_principal_patch,
         create_cert=create_cert, cert=cert, years=years,
         end_date=end_date, keyvault=keyvault, append=append, display_name=display_name)
@@ -1084,7 +1081,7 @@ def reset_service_principal_credential(cmd, client, identifier, create_cert=Fals
 
 def delete_service_principal_credential(cmd, client, identifier, key_id, cert=False):
     sp = show_service_principal(client, identifier)
-    _delete_credential(sp, client.service_principal_password_remove, client.service_principal_patch,
+    _delete_credential(sp, client.service_principal_remove_password, client.service_principal_patch,
                        key_id=key_id, cert=cert)
 
 
@@ -1092,10 +1089,7 @@ def list_service_principal_credentials(cmd, identifier, cert=False):
     # Also see list_application_credentials
     client = _graph_client_factory(cmd.cli_ctx)
     sp = show_service_principal(client, identifier)
-    if cert:
-        return sp['keyCredentials']
-    else:
-        return sp['passwordCredentials']
+    return _list_credentials(sp, cert)
 
 
 def _get_app_object_id_from_sp_object_id(client, sp_object_id):
@@ -1170,7 +1164,7 @@ def create_service_principal_for_rbac(
     # For existing applications, delete all passwords first.
     for cred in aad_application['passwordCredentials']:
         body = {"keyId": cred['keyId']}
-        graph_client.application_password_remove(aad_application[ID], body)
+        graph_client.application_remove_password(aad_application[ID], body)
 
     # Password credential is created *after* application creation.
     # https://docs.microsoft.com/en-us/graph/api/resources/passwordcredential
@@ -1573,7 +1567,7 @@ def _application_add_password(client, app, start_datetime, end_datetime, display
             "displayName": display_name
         }
     }
-    result = client.application_password_add(app[ID], body)
+    result = client.application_add_password(app[ID], body)
     return result
 
 
@@ -1668,9 +1662,9 @@ def _build_key_credentials(key_value=None, key_type=None, key_usage=None,
     return [key_credential]
 
 
-def _reset_credentials(cmd, graph_object, add_password_func, remove_password_func, patch_func,
-                       create_cert=False, cert=None, years=None,
-                       end_date=None, keyvault=None, append=False, display_name=None):
+def _reset_credential(cmd, graph_object, add_password_func, remove_password_func, patch_func,
+                      create_cert=False, cert=None, years=None,
+                      end_date=None, keyvault=None, append=False, display_name=None):
     """Reset passwordCredentials and keyCredentials properties for application or service principal.
     Application and service principal share the same interface for operating credentials.
 
@@ -1738,7 +1732,7 @@ def _reset_credentials(cmd, graph_object, add_password_func, remove_password_fun
         patch_body = {
             'keyCredentials': key_creds
         }
-        patch_func(graph_object[ID], body=patch_body)
+        patch_func(graph_object[ID], patch_body)
 
     # Keep backward compatibility
     # TODO: Should we return the passwordCredential or keyCredential directly?
@@ -1773,6 +1767,13 @@ def _delete_credential(graph_object, remove_password_func, patch_function, key_i
             "keyId": key_id
         }
         remove_password_func(graph_object[ID], body)
+
+
+def _list_credentials(graph_object, cert):
+    if cert:
+        return graph_object['keyCredentials']
+    else:
+        return graph_object['passwordCredentials']
 
 
 def _match_odata_type(odata_type, user_input):

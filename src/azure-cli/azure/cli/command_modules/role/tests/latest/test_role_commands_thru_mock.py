@@ -17,7 +17,7 @@ from azure.graphrbac.models import (Application, ServicePrincipal, GraphErrorExc
 from azure.cli.command_modules.role.custom import (create_role_definition,
                                                    update_role_definition,
                                                    create_service_principal_for_rbac,
-                                                   reset_service_principal_credential,
+                                                   reset_application_credential,
                                                    update_application, _try_x509_pem,
                                                    delete_service_principal_credential,
                                                    list_service_principal_credentials,
@@ -31,21 +31,62 @@ from knack.util import CLIError
 
 # pylint: disable=line-too-long
 
+MOCKED_TENANT_ID = '00000001-0000-0000-0000-000000000000'
+
+
 MOCKED_APP_APP_ID = '00000000-0000-0000-0000-000000000001'
+MOCKED_APP_ID = '00000000-0000-0000-0000-000000000002'
+
 MOCKED_APP_DISPLAY_NAME = 'mocked_app'
 MOCKED_PASSWORD = 'graph_service_generated_password'
+MOCKED_CREDENTIAL_DISPLAY_NAME = "test-credential-display-name"
+MOCKED_PASSWORD_KEY_ID = "f0b0b335-1d71-4883-8f98-567911bfdca6"
+MOCKED_KEY_KEY_ID = "d35f12d5-1fab-4fe9-86e5-ed072e3d2288"
 
 
 MOCKED_APP = {
-    'id': '00000000-0000-0000-0000-000000000002',
+    'id': MOCKED_APP_ID,
     'appId': MOCKED_APP_APP_ID,
     'displayName': MOCKED_APP_DISPLAY_NAME,
-    'passwordCredentials': []
+    "passwordCredentials": [
+        {
+            "customKeyIdentifier": None,
+            "displayName": MOCKED_CREDENTIAL_DISPLAY_NAME,
+            "endDateTime": "2022-11-30T10:01:21Z",
+            "hint": "Z3Q",
+            "keyId": MOCKED_PASSWORD_KEY_ID,
+            "secretText": None,
+            "startDateTime": "2021-11-30T10:01:21Z"
+        }
+    ],
+    "keyCredentials": [
+        {
+            "customKeyIdentifier": "A90481E4E00F015B837330A27790E67C28A06E46",
+            "displayName": "CN=CLI-Login",
+            "endDateTime": "2023-05-07T05:39:54Z",
+            "key": None,
+            "keyId": MOCKED_KEY_KEY_ID,
+            "startDateTime": "2022-05-07T05:39:54Z",
+            "type": "AsymmetricX509Cert",
+            "usage": "Verify"
+        }
+    ],
 }
 
 MOCKED_SP = {
     'id': '00000000-0000-0000-0000-000000000003',
     'appId': MOCKED_APP_APP_ID
+}
+
+# Example from https://docs.microsoft.com/en-us/graph/api/serviceprincipal-addpassword
+MOCKED_ADD_PASSWORD_RESULT = {
+    "customKeyIdentifier": None,
+    "endDateTime": "2021-09-09T19:50:29.3086381Z",
+    "keyId": MOCKED_PASSWORD_KEY_ID,
+    "startDateTime": "2019-09-09T19:50:29.3086381Z",
+    "secretText": MOCKED_PASSWORD,
+    "hint": "[6g",
+    "displayName": "Password friendly name"
 }
 
 
@@ -139,7 +180,7 @@ class TestRoleMocked(unittest.TestCase):
         graph_client_mock.return_value = faked_graph_client
 
         faked_graph_client.application_create.return_value = MOCKED_APP
-        faked_graph_client.application_password_add.return_value = {'secretText': MOCKED_PASSWORD}
+        faked_graph_client.application_add_password.return_value = {'secretText': MOCKED_PASSWORD}
         faked_graph_client.service_principal_create.return_value = MOCKED_SP
 
         # action
@@ -190,37 +231,39 @@ class TestRoleMocked(unittest.TestCase):
 
     @mock.patch('azure.cli.command_modules.role.custom._graph_client_factory', autospec=True)
     def test_reset_credentials_password(self, graph_client_mock):
-        patch_invoked = [False]  # to be used in a nested function below, array type is needed to get scoping work
-        test_object_id = 'app_object_id'
-        test_pwd = 'verySecret'
-        name = 'http://mysp'
 
-        def test_patch(id, param):
-            patch_invoked[0] = True
-            self.assertEqual(id, test_object_id)
-            self.assertEqual(1, len(param.password_credentials))
-            self.assertEqual(param.password_credentials[0].value, test_pwd)
+        def add_password_mock(id, body):
+            self.assertEqual(id, MOCKED_APP_ID)
+            self.assertEqual(MOCKED_CREDENTIAL_DISPLAY_NAME, body['passwordCredential']['displayName'])
+            return MOCKED_ADD_PASSWORD_RESULT
+
+        def remove_password_mock(id, body):
+            self.assertEqual(id, MOCKED_APP_ID)
+            self.assertEqual(MOCKED_PASSWORD_KEY_ID, body['keyId'])
 
         faked_graph_client = mock.MagicMock()
-        sp_object = mock.MagicMock()
-        sp_object.app_id = 'app_id'
-        app_object = mock.MagicMock()
         cmd = mock.MagicMock()
         cmd.cli_ctx = DummyCli()
-        app_object.object_id = test_object_id
 
         graph_client_mock.return_value = faked_graph_client
-        faked_graph_client.service_principals.list.return_value = [sp_object]
-        faked_graph_client.applications.list.return_value = [app_object]
-        faked_graph_client.applications.get.side_effect = [app_object]
-        faked_graph_client.applications.patch = test_patch
-        faked_graph_client.applications.list_password_credentials.side_effect = [ValueError('should not invoke')]
+        faked_graph_client.tenant = MOCKED_TENANT_ID
+        faked_graph_client.application_list.return_value = [MOCKED_APP]
+        faked_graph_client.application_get.side_effect = [MOCKED_APP]
+        faked_graph_client.application_add_password.side_effect = add_password_mock
+        faked_graph_client.application_remove_password.side_effect = remove_password_mock
 
         # action
-        reset_service_principal_credential(cmd, name, test_pwd, append=False)
+        result = reset_application_credential(cmd, faked_graph_client, MOCKED_APP_APP_ID,
+                                              display_name=MOCKED_CREDENTIAL_DISPLAY_NAME)
 
         # assert
-        self.assertTrue(patch_invoked[0])
+        faked_graph_client.application_add_password.assert_called_once()
+        faked_graph_client.application_remove_password.assert_called_once()
+        assert result == {
+            'appId': MOCKED_APP_APP_ID,
+            'password': MOCKED_PASSWORD,
+            'tenant': MOCKED_TENANT_ID
+        }
 
     @mock.patch('azure.cli.command_modules.role.custom._graph_client_factory', autospec=True)
     def test_reset_credentials_certificate_append_option(self, graph_client_mock):
@@ -246,14 +289,14 @@ class TestRoleMocked(unittest.TestCase):
         key_id_of_existing_cert = 'existing cert'
         name = 'http://mysp'
 
-        def test_patch(id, param):
+        def application_patch_mock(id, body):
             patch_invoked[0] = True
-            self.assertEqual(id, test_object_id)
-            self.assertEqual(2, len(param.key_credentials))
-            self.assertTrue(len(param.key_credentials[1].value) > 0)
-            self.assertEqual(param.key_credentials[1].type, 'AsymmetricX509Cert')
-            self.assertEqual(param.key_credentials[1].usage, 'Verify')
-            self.assertEqual(param.key_credentials[0].key_id, key_id_of_existing_cert)
+            self.assertEqual(id, MOCKED_APP_ID)
+            self.assertEqual(2, len(body['keyCredentials']))
+            self.assertEqual(body['keyCredentials'][0]['keyId'], MOCKED_KEY_KEY_ID)
+            self.assertTrue(body['keyCredentials'][1]['key'])
+            self.assertEqual(body['keyCredentials'][1]['type'], 'AsymmetricX509Cert')
+            self.assertEqual(body['keyCredentials'][1]['usage'], 'Verify')
 
         faked_graph_client = mock.MagicMock()
         sp_object = mock.MagicMock()
@@ -266,17 +309,22 @@ class TestRoleMocked(unittest.TestCase):
         cmd.cli_ctx = DummyCli()
 
         graph_client_mock.return_value = faked_graph_client
-        faked_graph_client.service_principals.list.return_value = [sp_object]
-        faked_graph_client.applications.list.return_value = [app_object]
-        faked_graph_client.applications.get.side_effect = [app_object]
-        faked_graph_client.applications.patch = test_patch
-        faked_graph_client.applications.list_key_credentials.return_value = [key_cred]
+        faked_graph_client.tenant = MOCKED_TENANT_ID
+        faked_graph_client.application_list.return_value = [MOCKED_APP]
+        faked_graph_client.application_get.side_effect = [MOCKED_APP]
+        faked_graph_client.application_patch.side_effect = application_patch_mock
 
         # action
-        reset_service_principal_credential(cmd, name, cert=test_cert, append=True)
+        result = reset_application_credential(cmd, faked_graph_client, MOCKED_APP_APP_ID, cert=test_cert, append=True,
+                                              display_name=MOCKED_CREDENTIAL_DISPLAY_NAME)
 
         # assert
-        self.assertTrue(patch_invoked[0])
+        faked_graph_client.application_patch.assert_called_once()
+        assert result == {
+            'appId': MOCKED_APP_APP_ID,
+            'password': None,
+            'tenant': MOCKED_TENANT_ID
+        }
 
     @mock.patch('azure.cli.command_modules.role.custom._auth_client_factory', autospec=True)
     @mock.patch('azure.cli.command_modules.role.custom._graph_client_factory', autospec=True)

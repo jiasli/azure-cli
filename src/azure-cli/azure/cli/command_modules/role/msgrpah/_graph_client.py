@@ -105,12 +105,13 @@ class GraphClient:
         result = self._send("DELETE", "/applications/{id}/owners/{owner_id}/$ref".format(id=id, owner_id=owner_id))
         return result
 
-    def application_password_add(self, id, body):
+    def application_add_password(self, id, body):
         # https://docs.microsoft.com/en-us/graph/api/application-addpassword
+        # 'addPassword' appears in the API, so we keep its name, instead of using application_password_add
         result = self._send("POST", "/applications/{id}/addPassword".format(id=id), body=body)
         return result
 
-    def application_password_remove(self, id, body):
+    def application_remove_password(self, id, body):
         # https://docs.microsoft.com/en-us/graph/api/application-removepassword
         result = self._send("POST", "/applications/{id}/removePassword".format(id=id), body=body)
         return result
@@ -140,12 +141,12 @@ class GraphClient:
         result = self._send("PATCH", "/servicePrincipals/{id}".format(id=id), body=body)
         return result
 
-    def service_principal_password_add(self, id, body):
+    def service_principal_add_password(self, id, body):
         # https://docs.microsoft.com/en-us/graph/api/serviceprincipal-addpassword
         result = self._send("POST", "/servicePrincipals/{id}/addPassword".format(id=id), body=body)
         return result
 
-    def service_principal_password_remove(self, id, body):
+    def service_principal_remove_password(self, id, body):
         # https://docs.microsoft.com/en-us/graph/api/serviceprincipal-removepassword
         result = self._send("POST", "/servicePrincipals/{id}/removePassword".format(id=id), body=body)
         return result
