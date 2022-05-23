@@ -13,6 +13,13 @@ from azure.cli.core.azclierror import HTTPError
 # pylint: disable=redefined-builtin, too-many-public-methods
 
 class GraphClient:
+    """A lightweight Microsoft Graph API client.
+
+    To create an instance of this class, use azure.cli.command_modules.role.graph_client_factory.
+    Don't initiate this class yourself.
+
+    For full documentation, see doc/microsoft_graph_client.md in this repo.
+    """
     def __init__(self, cli_ctx):
         self.cli_ctx = cli_ctx
         self.tenant = Profile(cli_ctx).get_login_credentials()[2]
