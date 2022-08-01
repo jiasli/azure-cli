@@ -177,3 +177,16 @@ def read_response_templates():
         error_template = f.read()
 
     return success_template, error_template
+
+
+class AccessTokenCredential:
+    """Simple access token Authentication. Returns the access token as-is.
+    """
+
+    def __init__(self, access_token):
+        self.access_token = access_token
+
+    def get_token(self, *arg, **kwargs):
+        import time
+        # Assume the access token expires in 1 year
+        return AccessToken(self.access_token, int(time.time()) + 31536000)
