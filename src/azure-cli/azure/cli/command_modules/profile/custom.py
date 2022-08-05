@@ -99,7 +99,8 @@ def account_clear(cmd):
 
 # pylint: disable=inconsistent-return-statements, too-many-branches
 def login(cmd, username=None, password=None, service_principal=None, tenant=None, allow_no_subscriptions=False,
-          identity=False, use_device_code=False, use_cert_sn_issuer=None, scopes=None, client_assertion=None):
+          identity=False, use_device_code=False, use_cert_sn_issuer=None, scopes=None, client_assertion=None,
+          claims_challenge=None):
     """Log in to access Azure subscriptions"""
 
     # quick argument usage check
@@ -111,6 +112,10 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         raise CLIError("usage error: '--use-sn-issuer' is only applicable with a service principal")
     if service_principal and not username:
         raise CLIError('usage error: --service-principal --username NAME --password SECRET --tenant TENANT')
+
+    if claims_challenge:
+        from azure.cli.core.auth.util import decode_claims
+        claims_challenge = decode_claims(claims_challenge)
 
     interactive = False
 
@@ -145,7 +150,8 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         scopes=scopes,
         use_device_code=use_device_code,
         allow_no_subscriptions=allow_no_subscriptions,
-        use_cert_sn_issuer=use_cert_sn_issuer)
+        use_cert_sn_issuer=use_cert_sn_issuer,
+        claims_challenge=claims_challenge)
     all_subscriptions = list(subscriptions)
     for sub in all_subscriptions:
         sub['cloudName'] = sub.pop('environmentName', None)

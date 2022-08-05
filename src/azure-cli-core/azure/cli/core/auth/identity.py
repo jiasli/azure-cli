@@ -94,7 +94,9 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         return {
             "authority": self._msal_authority,
             "token_cache": Identity._msal_token_cache,
-            "http_cache": Identity._msal_http_cache
+            "http_cache": Identity._msal_http_cache,
+            # CP1 means we can handle claims challenges (CAE)
+            "client_capabilities": ['CP1']
         }
 
     @property
@@ -126,7 +128,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
             Identity._service_principal_store_instance = ServicePrincipalStore(store)
         return Identity._service_principal_store_instance
 
-    def login_with_auth_code(self, scopes, **kwargs):
+    def login_with_auth_code(self, scopes, claims_challenge=None, **kwargs):
         # Emit a warning to inform that a browser is opened.
         # Only show the path part of the URL and hide the query string.
         logger.warning("A web browser has been opened at %s. Please continue the login in the web browser. "
@@ -140,7 +142,8 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         # on port 8400 from the old design. However, ADFS only allows port 8400.
         result = self._msal_app.acquire_token_interactive(
             scopes, prompt='select_account', port=8400 if self._is_adfs else None,
-            success_template=success_template, error_template=error_template, **kwargs)
+            success_template=success_template, error_template=error_template, claims_challenge=claims_challenge,
+            **kwargs)
         return check_result(result)
 
     def login_with_device_code(self, scopes, **kwargs):
