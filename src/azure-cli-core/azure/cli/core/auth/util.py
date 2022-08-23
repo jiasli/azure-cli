@@ -50,7 +50,7 @@ def _generate_login_command(scopes=None, claims=None):
     if scopes:
         login_command.append('--scope {}'.format(' '.join(scopes)))
 
-    # Rejected by Continuous Access Evaluation
+    # Rejected by CAE
     if claims:
         login_command.append('--claims {}'.format(encode_claims(claims)))
         # Explicit logout is needed: https://github.com/AzureAD/microsoft-authentication-library-for-python/issues/335
@@ -187,6 +187,7 @@ def read_response_templates():
 
 def encode_claims(claims: str):
     import base64
+    # Make sure claims is not encoded again
     try:
         base64.urlsafe_b64decode(claims)
         is_base64 = True
@@ -201,6 +202,7 @@ def encode_claims(claims: str):
 
 def decode_claims(claims: str):
     import base64
+    # If claims is already decoded, return it as-is
     try:
         claims = base64.urlsafe_b64decode(claims).decode()
     except ValueError:
