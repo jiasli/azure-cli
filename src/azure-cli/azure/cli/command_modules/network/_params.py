@@ -40,8 +40,7 @@ from azure.cli.command_modules.network._validators import (
 from azure.mgmt.trafficmanager.models import MonitorProtocol, ProfileStatus
 from azure.cli.command_modules.network._completers import (
     subnet_completion_list, get_lb_subresource_completion_list, get_ag_subresource_completion_list,
-    ag_url_map_rule_completion_list, tm_endpoint_completion_list, service_endpoint_completer,
-    get_sdk_completer)
+    ag_url_map_rule_completion_list, tm_endpoint_completion_list, get_sdk_completer)
 from azure.cli.command_modules.network._actions import (
     AddBackendAddressCreate, AddBackendAddressCreateForCrossRegionLB, TrustedClientCertificateCreate,
     SslProfilesCreate, NatRuleCreate, IPConfigsCreate, ASGsCreate, AddMappingRequest)
@@ -52,7 +51,7 @@ from azure.cli.core.profiles import ResourceType
 # pylint: disable=too-many-locals, too-many-branches, too-many-statements
 def load_arguments(self, _):
 
-    (Access, ApplicationGatewayFirewallMode, ApplicationGatewayProtocol, ApplicationGatewayRedirectType,
+    (ApplicationGatewayFirewallMode, ApplicationGatewayProtocol, ApplicationGatewayRedirectType,
      ApplicationGatewayRequestRoutingRuleType, ApplicationGatewaySkuName, ApplicationGatewaySslProtocol, AuthenticationMethod,
      Direction, VpnAuthenticationType,
      ExpressRouteCircuitSkuFamily, ExpressRouteCircuitSkuTier, ExpressRoutePortsEncapsulation,
@@ -64,7 +63,7 @@ def load_arguments(self, _):
      ConnectionMonitorEndpointFilterType, ConnectionMonitorTestConfigurationProtocol,
      PreferredIPVersion, HTTPConfigurationMethod, OutputType, DestinationPortBehavior, CoverageLevel, EndpointType, GatewayLoadBalancerTunnelProtocol,
      GatewayLoadBalancerTunnelInterfaceType, VpnNatRuleType, VpnNatRuleMode, LoadBalancerBackendAddressAdminState) = self.get_models(
-         'Access', 'ApplicationGatewayFirewallMode', 'ApplicationGatewayProtocol', 'ApplicationGatewayRedirectType',
+         'ApplicationGatewayFirewallMode', 'ApplicationGatewayProtocol', 'ApplicationGatewayRedirectType',
          'ApplicationGatewayRequestRoutingRuleType', 'ApplicationGatewaySkuName', 'ApplicationGatewaySslProtocol', 'AuthenticationMethod',
          'Direction', 'VpnAuthenticationType',
          'ExpressRouteCircuitSkuFamily', 'ExpressRouteCircuitSkuTier', 'ExpressRoutePortsEncapsulation',
@@ -1845,18 +1844,6 @@ def load_arguments(self, _):
         c.argument('custom_ip_prefix_name', min_api='2020-06-01', help="A custom prefix from which the public prefix derived. If you'd like to cross subscription, please use Resource ID instead.")
     # endregion
 
-    # region RouteFilters
-    with self.argument_context('network route-filter') as c:
-        c.argument('route_filter_name', name_arg_type, help='Name of the route filter.')
-        c.argument('expand', arg_type=get_enum_type(['peerings']))
-
-    with self.argument_context('network route-filter rule') as c:
-        c.argument('route_filter_name', options_list=['--filter-name'], help='Name of the route filter.', id_part='name')
-        c.argument('rule_name', name_arg_type, help='Name of the route filter rule.', id_part='child_name_1')
-        c.argument('access', help='The access type of the rule.', arg_type=get_enum_type(Access))
-        c.argument('communities', nargs='+')
-    # endregion
-
     # region RouteTables
     with self.argument_context('network route-table') as c:
         c.argument('route_table_name', name_arg_type, help='Name of the route table.', completer=get_resource_name_completion_list('Microsoft.Network/routeTables'), id_part='name')
@@ -1876,26 +1863,6 @@ def load_arguments(self, _):
         c.argument('next_hop_ip_address', help='The IP address packets should be forwarded to when using the VirtualAppliance hop type.')
         c.argument('address_prefix', help='The destination CIDR to which the route applies.')
 
-    # endregion
-
-    # region ServiceEndpoint
-    service_endpoint_policy_name = CLIArgumentType(options_list='--policy-name', id_part='name', help='Name of the service endpoint policy.', completer=get_resource_name_completion_list('Microsoft.Network/serviceEndpointPolicies'))
-
-    with self.argument_context('network service-endpoint policy') as c:
-        c.argument('service_endpoint_policy_name', service_endpoint_policy_name, options_list=['--name', '-n'])
-
-    with self.argument_context('network service-endpoint policy show') as c:
-        c.ignore('expand')
-
-    with self.argument_context('network service-endpoint policy-definition') as c:
-        c.argument('service_endpoint_policy_name', service_endpoint_policy_name)
-        c.argument('service_endpoint_policy_definition_name', name_arg_type, help='Name of the service endpoint policy definition', id_part='child_name_1')
-        c.argument('description', help='Description of the policy definition.')
-        c.argument('service', help='Service name the policy definition applies to.', completer=service_endpoint_completer)
-        c.argument('service_resources', help='Space-separated list of service resources the definition applies to.', nargs='+')
-
-    with self.argument_context('network service-endpoint policy-definition list') as c:
-        c.argument('service_endpoint_policy_name', service_endpoint_policy_name, id_part=None)
     # endregion
 
     # region TrafficManagers
@@ -2289,30 +2256,4 @@ def load_arguments(self, _):
                        arg_type=get_enum_type(TYPE_CLIENT_MAPPING.keys()))
             c.argument('resource_group_name', required=False)
             c.argument('resource_name', required=False, help='Name of the resource')
-    # endregion
-
-    # region Network Virtual Appliance
-    with self.argument_context('network virtual-appliance', arg_group='Sku') as c:
-        c.argument('vendor', help='Virtual Appliance Vendor.')
-        c.argument('bundled_scale_unit', options_list=['--scale-unit'], help='Virtual Appliance Scale Unit.')
-        c.argument('market_place_version', options_list=['--version', '-v'], help='Virtual Appliance Version.')
-    with self.argument_context('network virtual-appliance') as c:
-        c.argument('network_virtual_appliance_name', help='The name of Network Virtual Appliance', options_list=['--name', '-n'])
-        c.argument('boot_strap_configuration_blobs', options_list=['--boot-strap-config-blobs', '--boot-blobs'], nargs='+', help='Space-separated list of BootStrapConfigurationBlobs storage URLs.')
-        c.argument('cloud_init_configuration_blobs', options_list=['--cloud-init-config-blobs', '--cloud-blobs'], nargs='+', help='Space-separated list of CloudInitConfigurationBlob storage URLs.')
-        c.argument('virtual_hub', options_list=['--vhub'], help='Name or ID of the virtual hub to which the Security Partner Provider belongs.', validator=validate_virtual_hub)
-        c.argument('cloud_init_configuration', options_list=['--cloud-init-config', '--init-config'], help='CloudInitConfiguration scripts that will be run during cloud initialization')
-        c.argument('asn', type=int, help='VirtualAppliance ASN. The valid value ranges from 1 to 4294967295. ')
-
-    with self.argument_context('network virtual-appliance sku') as c:
-        c.argument('sku_name', help='The name of Network Virtual Appliance SKU', options_list=['--name', '-n'])
-
-    with self.argument_context('network virtual-appliance site') as c:
-        c.argument('network_virtual_appliance_name', options_list=['--appliance-name'])
-        c.argument('site_name', help='The name of Network Virtual Appliance Site', options_list=['--name', '-n'])
-        c.argument('address_prefix', help='Address Prefix of Network Virtual Appliance Site')
-    with self.argument_context('network virtual-appliance site', arg_group='Breakout of O365') as c:
-        c.argument('allow', arg_type=get_three_state_flag(), help='Flag to control breakout of o365 allow category.')
-        c.argument('optimize', arg_type=get_three_state_flag(), help='Flag to control breakout of o365 optimize category.')
-        c.argument('default', arg_type=get_three_state_flag(), help='Flag to control breakout of o365 default category.')
     # endregion
