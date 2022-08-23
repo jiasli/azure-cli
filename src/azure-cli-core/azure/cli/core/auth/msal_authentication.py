@@ -56,6 +56,7 @@ class UserCredential(PublicClientApplication):
     def get_token(self, *scopes, claims=None, **kwargs):
         # scopes = ['https://pas.windows.net/CheckMyAccess/Linux/.default']
         logger.debug("UserCredential.get_token: scopes=%r, claims=%r, kwargs=%r", scopes, claims, kwargs)
+
         if claims:
             logger.warning('Acquiring new access token silently for tenant %s with claims challenge: %s',
                            self.authority.tenant, claims)
