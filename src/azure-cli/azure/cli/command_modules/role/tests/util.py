@@ -9,6 +9,8 @@ from azure.cli.testsdk.scenario_tests.recording_processors import RecordingProce
 ROLE_COMMAND_MAX_RETRY = 20
 ROLE_COMMAND_SLEEP_DURATION = 10
 
+TEST_TENANT_DOMAIN = 'AzureSDKTeam.onmicrosoft.com'
+
 
 def retry(func, sleep_duration=ROLE_COMMAND_SLEEP_DURATION, max_retry=ROLE_COMMAND_MAX_RETRY):
     """Retry func until success."""

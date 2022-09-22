@@ -18,7 +18,7 @@ from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 from azure.cli.core.profiles import ResourceType, get_sdk
 from azure.cli.testsdk import ScenarioTest, LiveScenarioTest, ResourceGroupPreparer, KeyVaultPreparer
 from azure.cli.command_modules.role._msgrpah import GraphError
-from ..util import retry
+from ..util import retry, TEST_TENANT_DOMAIN
 from .test_graph import GraphScenarioTestBase
 
 
@@ -258,7 +258,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + '@' + TEST_TENANT_DOMAIN,
                 'nsg': 'nsg1'
             })
 
@@ -390,7 +390,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             # User
             user = self.create_random_name('testuser', 15)
-            self.kwargs['upn'] = user + '@azuresdkteam.onmicrosoft.com'
+            self.kwargs['upn'] = user + '@' + TEST_TENANT_DOMAIN
 
             result = self.cmd('ad user create --display-name tester123 --password Test123456789 '
                               '--user-principal-name {upn}').get_output_in_json()
@@ -439,7 +439,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + '@' + TEST_TENANT_DOMAIN,
                 'rg': resource_group,
                 'description': "Role assignment foo to check on bar",
                 'condition': "@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:Name] stringEquals 'foo'",
@@ -512,7 +512,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + '@' + TEST_TENANT_DOMAIN,
                 'nsg': 'nsg1'
             })
 
@@ -565,7 +565,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
             user = self.create_random_name('testuser', 15)
             mgmt_grp = self.create_random_name('mgmt_grp', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + '@' + TEST_TENANT_DOMAIN,
                 'mgmt_grp': mgmt_grp
             })
 
@@ -606,7 +606,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTestBase):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + '@' + TEST_TENANT_DOMAIN,
             })
 
             self.cmd('ad user create --display-name tester123 --password Test123456789 --user-principal-name {upn}')

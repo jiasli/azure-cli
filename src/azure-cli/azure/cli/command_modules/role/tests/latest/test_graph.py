@@ -8,7 +8,7 @@ import unittest
 from unittest import mock
 
 from azure.cli.testsdk import MSGraphNameReplacer
-from ..util import MSGraphUpnReplacer
+from ..util import MSGraphUpnReplacer, TEST_TENANT_DOMAIN
 from azure.cli.testsdk import ScenarioTest
 from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 
@@ -718,7 +718,7 @@ class UserScenarioTest(GraphScenarioTestBase):
         self.kwargs = {
             'user1': self.create_random_name(prefix='graphusertest', length=20),
             'user2': self.create_random_name(prefix='graphusertest', length=20),
-            'domain': 'AzureSDKTeam.onmicrosoft.com',
+            'domain': TEST_TENANT_DOMAIN,
             'mail_nickname': 'graphusertest',
             'new_mail_nick_name': 'graphusertestupdate',
             'group': 'graphusertest_g',
@@ -792,7 +792,7 @@ class GroupScenarioTest(GraphScenarioTestBase):
         if not self._get_signed_in_user():
             return  # this test delete users which are beyond a SP's capacity, so quit...
 
-        domain = 'AzureSDKTeam.onmicrosoft.com'
+        domain = TEST_TENANT_DOMAIN
         self.kwargs = {
             'group': self.create_random_name(prefix='testgroup', length=24),
             'mail_nick_name': 'deleteme11',
@@ -973,7 +973,7 @@ class MiscellaneousScenarioTest(GraphScenarioTestBase):
 
         self.kwargs = {
             'display_name': display_name,
-            'upn': f'{display_name}@AzureSDKTeam.onmicrosoft.com',
+            'upn': f'{display_name}@{TEST_TENANT_DOMAIN}',
             'password': self.create_random_name(prefix='password-', length=40),
         }
         self.cmd('ad user create --display-name {display_name} --password {password} '
