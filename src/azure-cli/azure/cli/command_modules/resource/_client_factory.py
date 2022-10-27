@@ -4,10 +4,10 @@
 # --------------------------------------------------------------------------------------------
 
 
-def _resource_client_factory(cli_ctx, **_):
+def _resource_client_factory(cli_ctx, **kwargs):
     from azure.cli.core.commands.client_factory import get_mgmt_service_client
     from azure.cli.core.profiles import ResourceType
-    return get_mgmt_service_client(cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+    return get_mgmt_service_client(cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES, **kwargs)
 
 
 def _resource_feature_client_factory(cli_ctx, **_):

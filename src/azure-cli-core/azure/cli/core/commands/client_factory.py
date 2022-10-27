@@ -201,6 +201,7 @@ def _get_mgmt_service_client(cli_ctx,
                              sdk_profile=None,
                              aux_subscriptions=None,
                              aux_tenants=None,
+                             credential=None,
                              **kwargs):
     from azure.cli.core._profile import Profile
     logger.debug('Getting management service client client_type=%s', client_type.__name__)
@@ -208,10 +209,19 @@ def _get_mgmt_service_client(cli_ctx,
     # Track 1 SDK doesn't maintain the `resource`. The `resource` of the token is the one passed to
     # get_login_credentials.
     resource = resource or cli_ctx.cloud.endpoints.active_directory_resource_id
-    profile = Profile(cli_ctx=cli_ctx)
-    cred, subscription_id, _ = profile.get_login_credentials(subscription_id=subscription_id, resource=resource,
-                                                             aux_subscriptions=aux_subscriptions,
-                                                             aux_tenants=aux_tenants)
+
+    if credential:
+        # Use a custom credential
+        if not subscription_id:
+            raise ValueError('credential and subscription_id must be specified at the same time.')
+    else:
+        # Get a credential for the current `az login` context
+        profile = Profile(cli_ctx=cli_ctx)
+        credential, subscription_id, _ = profile.get_login_credentials(
+            subscription_id=subscription_id,
+            resource=resource,
+            aux_subscriptions=aux_subscriptions,
+            aux_tenants=aux_tenants)
 
     client_kwargs = {}
     if base_url_bound:
@@ -224,12 +234,12 @@ def _get_mgmt_service_client(cli_ctx,
         client_kwargs.update(kwargs)
 
     if is_track2(client_type):
-        client_kwargs.update(_prepare_mgmt_client_kwargs_track2(cli_ctx, cred))
+        client_kwargs.update(_prepare_mgmt_client_kwargs_track2(cli_ctx, credential))
 
     if subscription_bound:
-        client = client_type(cred, subscription_id, **client_kwargs)
+        client = client_type(credential, subscription_id, **client_kwargs)
     else:
-        client = client_type(cred, **client_kwargs)
+        client = client_type(credential, **client_kwargs)
 
     if not is_track2(client):
         configure_common_settings(cli_ctx, client)

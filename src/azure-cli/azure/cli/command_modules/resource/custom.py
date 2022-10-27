@@ -1252,11 +1252,16 @@ def _validate_resource_inputs(resource_group_name, resource_provider_namespace,
 
 # region Custom Commands
 
-def list_resource_groups(cmd, tag=None):  # pylint: disable=no-self-use
+def list_resource_groups(cmd, tag=None, access_token=None):  # pylint: disable=no-self-use
     """ List resource groups, optionally filtered by a tag.
     :param str tag:tag to filter by in 'key[=value]' format
     """
-    rcf = _resource_client_factory(cmd.cli_ctx)
+    cred = None
+    if access_token:
+        # Use custom access token
+        from azure.cli.core.auth.util import AccessTokenCredential
+        cred = AccessTokenCredential(access_token=access_token)
+    rcf = _resource_client_factory(cmd.cli_ctx, credential=cred, subscription_id=cmd.cli_ctx.data['subscription_id'])
 
     filters = []
     if tag:
