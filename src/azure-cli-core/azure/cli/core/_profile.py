@@ -193,11 +193,16 @@ class Profile:
         return deepcopy(consolidated)
 
     def login_with_managed_identity(self, identity_id=None, allow_no_subscriptions=None):
+        from azure.cli.core.auth.msal_authentication import ManagedIdentityCredential
+        result = ManagedIdentityCredential().get_token(*self._arm_scope)
+        print(result)
+
         import jwt
         from azure.mgmt.core.tools import is_valid_resource_id
         from azure.cli.core.auth.adal_authentication import MSIAuthenticationWrapper
         resource = self.cli_ctx.cloud.endpoints.active_directory_resource_id
 
+        from azure.cli.core.auth.msal_authentication import ManagedIdentityCredential
         if identity_id:
             if is_valid_resource_id(identity_id):
                 msi_creds = MSIAuthenticationWrapper(resource=resource, msi_res_id=identity_id)

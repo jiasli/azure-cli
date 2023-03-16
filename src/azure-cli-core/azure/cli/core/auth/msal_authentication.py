@@ -144,6 +144,11 @@ class ServicePrincipalCredential(ConfidentialClientApplication):
 
 class ManagedIdentityCredential(ManagedIdentity):
 
+    def __init__(self):
+        import requests
+        super().__init__(requests.Session())
+
+
     def get_token(self, *scopes, **kwargs):
         logger.debug("ManagedIdentityCredential.get_token: scopes=%r, kwargs=%r", scopes, kwargs)
 
