@@ -193,11 +193,39 @@ class Profile:
         return deepcopy(consolidated)
 
     def login_with_managed_identity(self, identity_id=None, allow_no_subscriptions=None):
+        from azure.cli.core.auth.identity import Identity
         import jwt
+        cred = Identity.get_managed_identity_credential()
+        token_entry = cred.get_token(*self._arm_scope)
+
+        token = token_entry.access_token
+        logger.info('MSI: token was retrieved. Now trying to initialize local accounts...')
+        decode = jwt.decode(token, algorithms=['RS256'], options={"verify_signature": False})
+        tenant = decode['tid']
+
+        subscription_finder = SubscriptionFinder(self.cli_ctx)
+        subscriptions = subscription_finder.find_using_specific_tenant(tenant, cred)
+        identity_type = MsiAccountTypes.system_assigned
+        base_name = ('{}-{}'.format(identity_type, identity_id) if identity_id else identity_type)
+        user = _USER_ASSIGNED_IDENTITY if identity_id else _SYSTEM_ASSIGNED_IDENTITY
+        if not subscriptions:
+            if allow_no_subscriptions:
+                subscriptions = self._build_tenant_level_accounts([tenant])
+            else:
+                raise CLIError('No access was configured for the managed identity, hence no subscriptions were found. '
+                               "If this is expected, use '--allow-no-subscriptions' to have tenant level access.")
+
+        consolidated = self._normalize_properties(user, subscriptions, is_service_principal=True,
+                                                  user_assigned_identity_id=base_name)
+        self._set_subscriptions(consolidated)
+        return deepcopy(consolidated)
+
+
         from azure.mgmt.core.tools import is_valid_resource_id
         from azure.cli.core.auth.adal_authentication import MSIAuthenticationWrapper
         resource = self.cli_ctx.cloud.endpoints.active_directory_resource_id
 
+        from azure.cli.core.auth.msal_authentication import ManagedIdentityCredential
         if identity_id:
             if is_valid_resource_id(identity_id):
                 msi_creds = MSIAuthenticationWrapper(resource=resource, msi_res_id=identity_id)

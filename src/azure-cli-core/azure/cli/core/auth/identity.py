@@ -229,8 +229,10 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         sp_auth = ServicePrincipalAuth(entry)
         return ServicePrincipalCredential(sp_auth, **self._msal_app_kwargs)
 
-    def get_managed_identity_credential(self, client_id=None):
-        raise NotImplementedError
+    @staticmethod
+    def get_managed_identity_credential(client_id=None):
+        from azure.cli.core.auth.msal_authentication import ManagedIdentityCredential
+        return ManagedIdentityCredential(client_id=client_id)
 
 
 class ServicePrincipalAuth:
