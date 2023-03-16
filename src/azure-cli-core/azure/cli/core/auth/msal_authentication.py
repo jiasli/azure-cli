@@ -18,7 +18,7 @@ azure.cli.core.auth.util.AccessToken to build the return value. See below creden
 
 from knack.log import get_logger
 from knack.util import CLIError
-from msal import PublicClientApplication, ConfidentialClientApplication
+from msal import PublicClientApplication, ConfidentialClientApplication, ManagedIdentity
 
 from .util import check_result, build_sdk_access_token
 
@@ -138,5 +138,16 @@ class ServicePrincipalCredential(ConfidentialClientApplication):
         result = self.acquire_token_silent(scopes, None, **kwargs)
         if not result:
             result = self.acquire_token_for_client(scopes, **kwargs)
+        check_result(result)
+        return build_sdk_access_token(result)
+
+
+class ManagedIdentityCredential(ManagedIdentity):
+
+    def get_token(self, *scopes, **kwargs):
+        logger.debug("ManagedIdentityCredential.get_token: scopes=%r, kwargs=%r", scopes, kwargs)
+
+        from .util import scopes_to_resource
+        result = self.acquire_token(scopes_to_resource(scopes))
         check_result(result)
         return build_sdk_access_token(result)
