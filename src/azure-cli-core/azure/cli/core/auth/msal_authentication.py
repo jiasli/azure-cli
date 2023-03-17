@@ -144,7 +144,7 @@ class ServicePrincipalCredential(ConfidentialClientApplication):
 
 class ManagedIdentityCredential(ManagedIdentity):
 
-    def __init__(self, client_id=None,):
+    def __init__(self, client_id=None):
         import requests
         super().__init__(requests.Session(), client_id=client_id)
 

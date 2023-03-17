@@ -195,19 +195,28 @@ class Profile:
     def login_with_managed_identity(self, identity_id=None, allow_no_subscriptions=None):
         from azure.cli.core.auth.identity import Identity
         import jwt
-        cred = Identity.get_managed_identity_credential()
+        cred = Identity.get_managed_identity_credential(client_id=identity_id)
         token_entry = cred.get_token(*self._arm_scope)
 
-        token = token_entry.access_token
+        token = token_entry.token
         logger.info('MSI: token was retrieved. Now trying to initialize local accounts...')
-        decode = jwt.decode(token, algorithms=['RS256'], options={"verify_signature": False})
-        tenant = decode['tid']
+        decoded = jwt.decode(token, algorithms=['RS256'], options={"verify_signature": False})
+        tenant = decoded['tid']
+        resource_id = decoded['xms_mirid']
+
+        # user.name is the managed identity type - systemAssignedIdentity or userAssignedIdentity.
+        # It should be deduced from whether /Microsoft.ManagedIdentity/userAssignedIdentities exists in xms_mirid
+        # claim. It shouldn't be deduced from whether identity_id is provided. This is because if identity_id
+        # is not provided, the token can be for either a system-assigned identity or a user-assigned identity.
+        # https://github.com/Azure/azure-cli/issues/13188
+        user = _USER_ASSIGNED_IDENTITY if '/Microsoft.ManagedIdentity/userAssignedIdentities' in resource_id \
+            else _SYSTEM_ASSIGNED_IDENTITY
 
         subscription_finder = SubscriptionFinder(self.cli_ctx)
         subscriptions = subscription_finder.find_using_specific_tenant(tenant, cred)
         identity_type = MsiAccountTypes.system_assigned
         base_name = ('{}-{}'.format(identity_type, identity_id) if identity_id else identity_type)
-        user = _USER_ASSIGNED_IDENTITY if identity_id else _SYSTEM_ASSIGNED_IDENTITY
+
         if not subscriptions:
             if allow_no_subscriptions:
                 subscriptions = self._build_tenant_level_accounts([tenant])
@@ -369,7 +378,9 @@ class Profile:
                                      resource=resource)
         else:
             # managed identity
-            cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
+            from azure.cli.core.auth.identity import Identity
+            cred = Identity.get_managed_identity_credential(client_id=managed_identity_id)
+            # cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
         return (cred,
                 str(account[_SUBSCRIPTION_ID]),
                 str(account[_TENANT_ID]))
@@ -395,9 +406,14 @@ class Profile:
             if tenant:
                 raise CLIError("Tenant shouldn't be specified for managed identity account")
             from .auth.util import scopes_to_resource
-            msi_creds = MsiAccountTypes.msi_auth_factory(identity_type, identity_id,
-                                                         scopes_to_resource(scopes))
-            sdk_token = msi_creds.get_token(*scopes)
+
+            from azure.cli.core.auth.identity import Identity
+            cred = Identity.get_managed_identity_credential(client_id=identity_id)
+            sdk_token = cred.get_token(*self._arm_scope)
+
+            # msi_creds = MsiAccountTypes.msi_auth_factory(identity_type, identity_id,
+            #                                              scopes_to_resource(scopes))
+            # sdk_token = msi_creds.get_token(*scopes)
         elif in_cloud_console() and account[_USER_ENTITY].get(_CLOUD_SHELL_ID):
             # Cloud Shell, which is just a system-assigned managed identity.
             if tenant:
