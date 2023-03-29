@@ -551,12 +551,16 @@ class Profile:
 
     @staticmethod
     def _parse_managed_identity_info(account):
-        # No longer works with the login profile created by versions < 2.0.51
-        # https://github.com/Azure/azure-cli/pull/7744
         identity_info = account[_USER_ENTITY].get(_ASSIGNED_IDENTITY_INFO)
         user_name = account[_USER_ENTITY].get(_USER_NAME)
 
         if user_name in [_SYSTEM_ASSIGNED_IDENTITY, _USER_ASSIGNED_IDENTITY]:
+            # We no longer support login profile created by versions < 2.0.51, which uses _SUBSCRIPTION_NAME as
+            # _ASSIGNED_IDENTITY_INFO.
+            # https://github.com/Azure/azure-cli/pull/7744
+            if not identity_info:
+                raise CLIError(f'{_ASSIGNED_IDENTITY_INFO} property is missing from the current account. '
+                               'Please run `az login --identity`.')
             parts = identity_info.split('-', 1)
             return parts[0], (None if len(parts) <= 1 else parts[1])
         return None, None
@@ -701,7 +705,7 @@ class ManagedIdentityAuth:
             return ManagedIdentityCredential(object_id=identity_id)
         if identity_type == ManagedIdentityAuth.user_assigned_resource_id:
             return ManagedIdentityCredential(msi_res_id=identity_id)
-        raise ValueError("unrecognized msi account name '{}'".format(identity_type))
+        raise ValueError("unrecognized managed identity account name '{}'".format(identity_type))
 
 
 class SubscriptionFinder:
