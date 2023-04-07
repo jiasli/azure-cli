@@ -196,13 +196,45 @@ class Profile:
         from azure.cli.core.auth.msal_authentication import ManagedIdentityCredential
         import jwt
 
-        # TODO: support object_id and msi_res_id like the old days
+        cred = None
+
         if identity_id:
-            cred = ManagedIdentityCredential(client_id=identity_id)
-            identity_type = ManagedIdentityAuth.user_assigned_client_id
+            from azure.mgmt.core.tools import is_valid_resource_id
+            if is_valid_resource_id(identity_id):
+                cred = ManagedIdentityCredential(mi_res_id=identity_id)
+                identity_type = ManagedIdentityAuth.id_type_resource_id
+            else:
+                authenticated = False
+                # Use trial and error approach to determine the ID type - client ID or object ID
+                from azure.cli.core.azclierror import AuthenticationError
+                try:
+                    cred = ManagedIdentityCredential(client_id=identity_id)
+                    cred.get_token(*self._arm_scope)
+                    identity_type = ManagedIdentityAuth.id_type_client_id
+                    authenticated = True
+                except AuthenticationError as ex:
+                    if 'Identity not found' in str(ex):
+                        logger.info('Sniff: not a client ID')
+                    else:
+                        raise
+
+                if not authenticated:
+                    try:
+                        cred = ManagedIdentityCredential(object_id=identity_id)
+                        cred.get_token(*self._arm_scope)
+                        identity_type = ManagedIdentityAuth.id_type_object_id
+                        authenticated = True
+                    except AuthenticationError as ex:
+                        if 'Identity not found' in str(ex):
+                            logger.info('Sniff: not an object ID')
+                        else:
+                            raise
+
+                if not authenticated:
+                    raise CLIError('Failed to connect to managed identity, check your managed identity ID.')
         else:
             cred = ManagedIdentityCredential()
-            identity_type = ManagedIdentityAuth.system_assigned
+            identity_type = ManagedIdentityAuth.id_type_no_id
 
         access_token = cred.get_token(*self._arm_scope)
 
@@ -683,29 +715,26 @@ class Profile:
 
 
 class ManagedIdentityAuth:
-    # pylint: disable=no-method-argument,no-self-argument
-    system_assigned = 'MSI'  # Not necessarily system-assigned. It merely means no ID is provided.
-    user_assigned_client_id = 'MSIClient'
-    user_assigned_object_id = 'MSIObject'
-    user_assigned_resource_id = 'MSIResource'
 
-    @staticmethod
-    def valid_account_types():
-        return [ManagedIdentityAuth.system_assigned, ManagedIdentityAuth.user_assigned_client_id,
-                ManagedIdentityAuth.user_assigned_object_id, ManagedIdentityAuth.user_assigned_resource_id]
+    # String constants defined in this class are saved to azureProfile.json, so this class shouldn't be put
+    # under auth/identity.py
+    id_type_no_id = 'MSI'  # Not necessarily system-assigned. It merely means no ID is provided.
+    id_type_client_id = 'MSIClient'
+    id_type_object_id = 'MSIObject'
+    id_type_resource_id = 'MSIResource'
 
     @staticmethod
     def credential_factory(identity_type, identity_id):
         from azure.cli.core.auth.msal_authentication import ManagedIdentityCredential
-        if identity_type == ManagedIdentityAuth.system_assigned:
+        if identity_type == ManagedIdentityAuth.id_type_no_id:
             return ManagedIdentityCredential()
-        if identity_type == ManagedIdentityAuth.user_assigned_client_id:
+        if identity_type == ManagedIdentityAuth.id_type_client_id:
             return ManagedIdentityCredential(client_id=identity_id)
-        if identity_type == ManagedIdentityAuth.user_assigned_object_id:
+        if identity_type == ManagedIdentityAuth.id_type_object_id:
             return ManagedIdentityCredential(object_id=identity_id)
-        if identity_type == ManagedIdentityAuth.user_assigned_resource_id:
+        if identity_type == ManagedIdentityAuth.id_type_resource_id:
             return ManagedIdentityCredential(msi_res_id=identity_id)
-        raise ValueError("unrecognized managed identity account name '{}'".format(identity_type))
+        raise ValueError("Unrecognized managed identity account type '{}'".format(identity_type))
 
 
 class SubscriptionFinder:
