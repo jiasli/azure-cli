@@ -206,7 +206,6 @@ class Profile:
             else:
                 authenticated = False
                 # Use trial and error approach to determine the ID type - client ID or object ID
-                from azure.cli.core.azclierror import AuthenticationError
                 try:
                     cred = ManagedIdentityCredential(client_id=identity_id)
                     cred.get_token(*self._arm_scope)
@@ -714,7 +713,7 @@ class Profile:
         return installation_id
 
 
-class ManagedIdentityAuth:
+class ManagedIdentityAuth:  # pylint: disable=too-few-public-methods
 
     # String constants defined in this class are saved to azureProfile.json, so this class shouldn't be put
     # under auth/identity.py
