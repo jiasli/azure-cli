@@ -733,7 +733,7 @@ class ManagedIdentityAuth:
         if identity_type == ManagedIdentityAuth.id_type_object_id:
             return ManagedIdentityCredential(object_id=identity_id)
         if identity_type == ManagedIdentityAuth.id_type_resource_id:
-            return ManagedIdentityCredential(msi_res_id=identity_id)
+            return ManagedIdentityCredential(mi_res_id=identity_id)
         raise ValueError("Unrecognized managed identity account type '{}'".format(identity_type))
 
 
