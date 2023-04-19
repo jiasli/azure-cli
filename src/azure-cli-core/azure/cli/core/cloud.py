@@ -588,10 +588,11 @@ def set_cloud_subscription(cli_ctx, cloud_name, subscription):
             config.remove_option(cloud_name, 'subscription')
         except configparser.NoSectionError:
             pass
-    if not os.path.isdir(GLOBAL_CONFIG_DIR):
-        os.makedirs(GLOBAL_CONFIG_DIR)
-    with open(CLOUD_CONFIG_FILE, 'w') as configfile:
-        config.write(configfile)
+    if cli_ctx.persist_to_disk:
+        if not os.path.isdir(GLOBAL_CONFIG_DIR):
+            os.makedirs(GLOBAL_CONFIG_DIR)
+        with open(CLOUD_CONFIG_FILE, 'w') as configfile:
+            config.write(configfile)
 
 
 def _set_active_subscription(cli_ctx, cloud_name):

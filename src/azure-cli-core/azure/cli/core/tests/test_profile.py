@@ -282,7 +282,7 @@ class TestProfile(unittest.TestCase):
                                   create_subscription_client_mock):
         login_with_auth_code_mock.return_value = self.user_identity_mock
 
-        cli = DummyCli()
+        cli = DummyCli(persist_to_disk=False)
         mock_subscription_client = mock.MagicMock()
         mock_subscription_client.tenants.list.return_value = [TenantStub(self.tenant_id)]
         mock_subscription_client.subscriptions.list.return_value = [deepcopy(self.subscription1_raw)]

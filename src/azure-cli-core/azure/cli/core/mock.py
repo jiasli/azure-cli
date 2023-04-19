@@ -23,6 +23,10 @@ class DummyCli(AzCli):
 
         from knack.completion import ARGCOMPLETE_ENV_NAME
 
+        from unittest import mock
+        mp = mock.patch('knack.config._ConfigFile.set', lambda *args: None)
+        mp.__enter__()
+
         super(DummyCli, self).__init__(
             cli_name='az',
             config_dir=os.path.join(GLOBAL_CONFIG_DIR, 'dummy_cli_config_dir',
@@ -33,7 +37,8 @@ class DummyCli(AzCli):
             logging_cls=AzCliLogging,
             output_cls=AzOutputProducer,
             help_cls=AzCliHelp,
-            invocation_cls=AzCliCommandInvoker)
+            invocation_cls=AzCliCommandInvoker,
+            **kwargs)
 
         self.data['headers'] = {}  # the x-ms-client-request-id is generated before a command is to execute
         self.data['command'] = 'unknown'
