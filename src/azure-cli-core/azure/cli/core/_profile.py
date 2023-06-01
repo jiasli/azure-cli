@@ -54,6 +54,10 @@ _ASSIGNED_IDENTITY_INFO = 'assignedIdentityInfo'
 _AZ_LOGIN_MESSAGE = "Please run 'az login' to setup account."
 
 
+AZURE_SUBSCRIPTION_ID = 'AZURE_SUBSCRIPTION_ID'
+IS_ENVIRONMENT_CREDENTIAL = 'isEnvironmentCredential'
+
+
 def load_subscriptions(cli_ctx, all_clouds=False, refresh=False):
     profile = Profile(cli_ctx=cli_ctx)
     if refresh:
@@ -312,14 +316,22 @@ class Profile:
             raise CLIError("Please specify only one of aux_subscriptions and aux_tenants, not both")
 
         account = self.get_subscription(subscription_id)
-
         managed_identity_type, managed_identity_id = Profile._try_parse_msi_account_name(account)
 
         # Cloud Shell is just a system assignment managed identity
         if in_cloud_console() and account[_USER_ENTITY].get(_CLOUD_SHELL_ID):
             managed_identity_type = MsiAccountTypes.system_assigned
 
-        if managed_identity_type is None:
+        if managed_identity_type:
+            # managed identity
+            cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
+
+        elif account[IS_ENVIRONMENT_CREDENTIAL]:
+            # Environment credential
+            from azure.cli.core.auth.identity import get_environment_credential
+            cred = get_environment_credential()
+
+        else:
             # user and service principal
             external_tenants = []
             if aux_tenants:
@@ -339,9 +351,6 @@ class Profile:
             cred = CredentialAdaptor(credential,
                                      auxiliary_credentials=external_credentials,
                                      resource=resource)
-        else:
-            # managed identity
-            cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
         return (cred,
                 str(account[_SUBSCRIPTION_ID]),
                 str(account[_TENANT_ID]))
@@ -541,6 +550,21 @@ class Profile:
         return active_account[_USER_ENTITY][_USER_NAME]
 
     def get_subscription(self, subscription=None):  # take id or name
+        if AZURE_SUBSCRIPTION_ID in os.environ:
+            from azure.cli.core.auth.identity import AZURE_CLIENT_ID, AZURE_TENANT_ID
+            subscription_dict = {
+                _SUBSCRIPTION_ID: os.environ[AZURE_SUBSCRIPTION_ID],
+                _USER_ENTITY: {
+                    _USER_NAME: os.environ[AZURE_CLIENT_ID],
+                    _USER_TYPE: _SERVICE_PRINCIPAL
+                },
+                _IS_DEFAULT_SUBSCRIPTION: True,
+                _TENANT_ID: os.environ[AZURE_TENANT_ID],
+                _ENVIRONMENT_NAME: self.cli_ctx.cloud.name,
+                IS_ENVIRONMENT_CREDENTIAL: True
+            }
+            return subscription_dict
+
         subscriptions = self.load_cached_subscriptions()
         if not subscriptions:
             raise CLIError(_AZ_LOGIN_MESSAGE)
