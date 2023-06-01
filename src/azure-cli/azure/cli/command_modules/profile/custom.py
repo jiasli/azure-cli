@@ -2,7 +2,6 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
-
 import os
 
 from knack.log import get_logger
@@ -75,6 +74,14 @@ def get_access_token(cmd, subscription=None, resource=None, scopes=None, resourc
     }
     if subscription:
         result['subscription'] = subscription
+
+    # Only for debugging
+    decode = True
+    if decode:
+        import jwt
+        import json
+        decoded_token = jwt.decode(creds[1], algorithms=['RS256'], options={"verify_signature": False})
+        logger.warning(json.dumps(decoded_token, indent=2))
 
     return result
 
