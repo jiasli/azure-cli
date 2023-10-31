@@ -456,9 +456,9 @@ def set_region_identified(region_input, region_identified):
 
 
 @decorators.suppress_all_exceptions()
-def set_broker_info(allow_broker):
-    # whether customer has configured `allow_broker` to enable WAM(Web Account Manager) login for authentication
-    _session.allow_broker = allow_broker
+def set_broker_info(enable_broker_on_windows):
+    # Log the value of `enable_broker_on_windows`
+    _session.enable_broker_on_windows = enable_broker_on_windows
 
 
 @decorators.suppress_all_exceptions()

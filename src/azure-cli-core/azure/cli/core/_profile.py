@@ -856,10 +856,11 @@ def _create_identity_instance(cli_ctx, *args, **kwargs):
     # EXPERIMENTAL: Use core.use_msal_http_cache=False to turn off MSAL HTTP cache.
     use_msal_http_cache = cli_ctx.config.getboolean('core', 'use_msal_http_cache', fallback=True)
 
-    # PREVIEW: On Windows, use core.allow_broker=true to use broker (WAM) for authentication.
-    allow_broker = cli_ctx.config.getboolean('core', 'allow_broker', fallback=False)
+    # On Windows, use core.enable_broker_on_windows=false to disable broker (WAM) for authentication.
+    enable_broker_on_windows = cli_ctx.config.getboolean('core', 'enable_broker_on_windows', fallback=True)
     from .telemetry import set_broker_info
-    set_broker_info(allow_broker=allow_broker)
+    set_broker_info(enable_broker_on_windows=enable_broker_on_windows)
 
-    return Identity(*args, encrypt=encrypt, use_msal_http_cache=use_msal_http_cache, allow_broker=allow_broker,
+    return Identity(*args, encrypt=encrypt, use_msal_http_cache=use_msal_http_cache,
+                    enable_broker_on_windows=enable_broker_on_windows,
                     **kwargs)

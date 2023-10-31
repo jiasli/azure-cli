@@ -54,7 +54,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
     _service_principal_store_instance = None
 
     def __init__(self, authority, tenant_id=None, client_id=None, encrypt=False, use_msal_http_cache=True,
-                 allow_broker=None):
+                 enable_broker_on_windows=None):
         """
         :param authority: Authentication authority endpoint. For example,
             - AAD: https://login.microsoftonline.com
@@ -69,7 +69,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
         self.client_id = client_id or AZURE_CLI_CLIENT_ID
         self._encrypt = encrypt
         self._use_msal_http_cache = use_msal_http_cache
-        self._allow_broker = allow_broker
+        self._enable_broker_on_windows = enable_broker_on_windows
 
         # Build the authority in MSAL style
         self._msal_authority, self._is_adfs = _get_authority_url(authority, tenant_id)
@@ -98,7 +98,7 @@ class Identity:  # pylint: disable=too-many-instance-attributes
             "authority": self._msal_authority,
             "token_cache": Identity._msal_token_cache,
             "http_cache": Identity._msal_http_cache,
-            "allow_broker": self._allow_broker,
+            "enable_broker_on_windows": self._enable_broker_on_windows,
             # CP1 means we can handle claims challenges (CAE)
             "client_capabilities": None if "AZURE_IDENTITY_DISABLE_CP1" in os.environ else ["CP1"]
         }
