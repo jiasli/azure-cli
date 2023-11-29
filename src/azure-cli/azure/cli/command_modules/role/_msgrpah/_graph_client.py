@@ -41,7 +41,8 @@ class GraphClient:
     def _send(self, method, url, param=None, body=None, api_version=V1_0):
         url = f'{self._endpoint}/{api_version}{url}'
 
-        if body:
+        # body should be serialized to JSON even if it is {} or []
+        if body is not None:
             body = json.dumps(body)
 
         list_result = []

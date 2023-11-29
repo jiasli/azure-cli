@@ -750,6 +750,9 @@ class UserScenarioTest(GraphScenarioTestBase):
             '--force-change-password-next-sign-in true '
         )
 
+        # Empty update should be allowed
+        self.cmd('ad user update --id {user1_id}')
+
         # show
         self.cmd('ad user show --id {user1}@{domain}',
                  checks=[
@@ -770,6 +773,7 @@ class UserScenarioTest(GraphScenarioTestBase):
 
         # delete
         self.cmd('ad user delete --id {user1_id}')
+        self.cmd('ad group delete --group {group_id}')
 
 
 class GroupScenarioTest(GraphScenarioTestBase):
