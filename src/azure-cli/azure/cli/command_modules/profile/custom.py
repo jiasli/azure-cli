@@ -30,6 +30,19 @@ _CLOUD_CONSOLE_LOGIN_WARNING = ("Cloud Shell is automatically authenticated unde
                                 " Run 'az login' only if you need to use a different account")
 
 
+LOGIN_ANNOUNCEMENT = (
+    "[Announcements]\n"
+    "Share your feedback regarding your experience with `az login` at https://aka.ms/azloginfeedback\n\n"
+    "If you encounter any problem, please open an issue at https://aka.ms/azclibug\n"
+)
+
+LOGIN_OUTPUT_WARNING = (
+    "[WARNING] The login output has been updated. Please be aware that it no longer displays the full list of "
+    "available subscriptions by default. To revert to the previous behavior, run "
+    "`az config set core.interactive_account_selection=false`.\n"
+)
+
+
 def list_subscriptions(cmd, all=False, refresh=False):  # pylint: disable=redefined-builtin
     """List the imported subscriptions."""
     from azure.cli.core.api import load_subscriptions
@@ -136,6 +149,9 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         from azure.cli.core.auth.identity import ServicePrincipalAuth
         password = ServicePrincipalAuth.build_credential(password, client_assertion, use_cert_sn_issuer)
 
+    interactive_account_selection = interactive and \
+        cmd.cli_ctx.config.getboolean('core', 'interactive_account_selection', fallback=True)
+
     subscriptions = profile.login(
         interactive,
         username,
@@ -145,7 +161,15 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         scopes=scopes,
         use_device_code=use_device_code,
         allow_no_subscriptions=allow_no_subscriptions,
-        use_cert_sn_issuer=use_cert_sn_issuer)
+        use_cert_sn_issuer=use_cert_sn_issuer,
+        interactive_account_selection=interactive_account_selection)
+
+    # No JSON output if interactive account selection is used
+    if interactive_account_selection:
+        print(LOGIN_ANNOUNCEMENT)
+        logger.warning(LOGIN_OUTPUT_WARNING)
+        return
+
     all_subscriptions = list(subscriptions)
     for sub in all_subscriptions:
         sub['cloudName'] = sub.pop('environmentName', None)
