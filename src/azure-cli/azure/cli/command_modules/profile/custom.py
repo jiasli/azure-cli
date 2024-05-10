@@ -149,7 +149,7 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         from azure.cli.core.auth.identity import ServicePrincipalAuth
         password = ServicePrincipalAuth.build_credential(password, client_assertion, use_cert_sn_issuer)
 
-    interactive_subscription_selection = interactive and \
+    select_subscription = interactive and \
         cmd.cli_ctx.config.getboolean('core', 'login_experience_v2', fallback=True)
 
     subscriptions = profile.login(
@@ -162,10 +162,16 @@ def login(cmd, username=None, password=None, service_principal=None, tenant=None
         use_device_code=use_device_code,
         allow_no_subscriptions=allow_no_subscriptions,
         use_cert_sn_issuer=use_cert_sn_issuer,
-        interactive_subscription_selection=interactive_subscription_selection)
+        show_progress=select_subscription)
 
     # No JSON output if interactive account selection is used
-    if interactive_subscription_selection:
+    if select_subscription:
+        from ._subscription_selector import SubscriptionSelector
+        from azure.cli.core._profile import _SUBSCRIPTION_ID
+
+        selected = SubscriptionSelector(subscriptions)()
+        profile.set_active_subscription(selected[_SUBSCRIPTION_ID])
+
         print(LOGIN_ANNOUNCEMENT)
         logger.warning(LOGIN_OUTPUT_WARNING)
         return

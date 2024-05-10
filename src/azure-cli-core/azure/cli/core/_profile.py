@@ -148,7 +148,7 @@ class Profile:
               use_device_code=False,
               allow_no_subscriptions=False,
               use_cert_sn_issuer=None,
-              interactive_subscription_selection=False,
+              show_progress=False,
               **kwargs):
         """
         For service principal, `password` is a dict returned by ServicePrincipalAuth.build_credential
@@ -175,7 +175,7 @@ class Profile:
                 identity.login_with_service_principal(username, password, scopes=scopes)
 
         # We have finished login. Let's find all subscriptions.
-        if interactive_subscription_selection:
+        if show_progress:
             message = ('Retrieving subscriptions for the selection...' if tenant else
                        'Retrieving tenants and subscriptions for the selection...')
             print(f"\n{message}")
@@ -210,7 +210,7 @@ class Profile:
         consolidated = self._normalize_properties(username, subscriptions,
                                                   is_service_principal, bool(use_cert_sn_issuer))
 
-        self._set_subscriptions(consolidated, interactive_subscription_selection=interactive_subscription_selection)
+        self._set_subscriptions(consolidated)
         return deepcopy(consolidated)
 
     def login_with_managed_identity(self, identity_id=None, allow_no_subscriptions=None):
@@ -472,8 +472,7 @@ class Profile:
         s.state = 'Enabled'
         return s
 
-    def _set_subscriptions(self, new_subscriptions, merge=True, secondary_key_name=None,
-                           interactive_subscription_selection=None):
+    def _set_subscriptions(self, new_subscriptions, merge=True, secondary_key_name=None):
 
         def _get_key_name(account, secondary_key_name):
             return (account[_SUBSCRIPTION_ID] if secondary_key_name is None
@@ -499,7 +498,6 @@ class Profile:
         dic.update((_get_key_name(x, secondary_key_name), x) for x in new_subscriptions)
         subscriptions = list(dic.values())
         if subscriptions:
-            # Automatically pick one first
             if active_one:
                 new_active_one = next(
                     (x for x in new_subscriptions if _match_account(x, active_subscription_id, secondary_key_name,
@@ -513,11 +511,6 @@ class Profile:
             else:
                 new_active_one = Profile._pick_working_subscription(new_subscriptions)
 
-            # Let the user interactively select one
-            if interactive_subscription_selection:
-                from azure.cli.core._subscription_selector import SubscriptionSelector
-                new_active_one = SubscriptionSelector(subscriptions, new_active_one)()
-
             new_active_one[_IS_DEFAULT_SUBSCRIPTION] = True
             default_sub_id = new_active_one[_SUBSCRIPTION_ID]
 
@@ -526,7 +519,6 @@ class Profile:
 
     @staticmethod
     def _pick_working_subscription(subscriptions):
-        """Pick the first enabled subscription"""
         s = next((x for x in subscriptions if x.get(_STATE) == 'Enabled'), None)
         return s or subscriptions[0]
 

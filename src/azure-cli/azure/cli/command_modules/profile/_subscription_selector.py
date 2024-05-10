@@ -3,7 +3,8 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-from azure.cli.core._profile import _SUBSCRIPTION_NAME, _SUBSCRIPTION_ID, _TENANT_DISPLAY_NAME, _TENANT_ID
+from azure.cli.core._profile import (_SUBSCRIPTION_NAME, _SUBSCRIPTION_ID, _TENANT_DISPLAY_NAME, _TENANT_ID,
+                                     _IS_DEFAULT_SUBSCRIPTION)
 from knack.log import get_logger
 
 logger = get_logger(__name__)
@@ -12,47 +13,10 @@ logger = get_logger(__name__)
 class SubscriptionSelector:
     DEFAULT_ROW_MARKER = '*'
 
-    def __init__(self, subscriptions, active_one):
+    def __init__(self, subscriptions):
         self._subscriptions = subscriptions
-        self._active_one = active_one
+        self._active_one = None
         self._format_subscription_table()
-
-    def __call__(self):
-        print(f'\n[Tenant and subscription selection]\n\n{self._table_str}\n')
-        active_one = self._active_one
-        tenant_string = self._get_tenant_string(active_one)
-        print(f"The default is marked with an {self.DEFAULT_ROW_MARKER}; "
-              f"the default tenant is '{tenant_string}' and subscription is "
-              f"'{active_one[_SUBSCRIPTION_NAME]}' ({active_one[_SUBSCRIPTION_ID]}).\n")
-
-        from knack.prompting import prompt, NoTTYException
-
-        # Keep prompting until the user inputs a valid index
-        while True:
-            try:
-                select_index = prompt('Select a subscription and tenant (Type a number or Enter for no changes): ')
-            except NoTTYException:
-                # This is a good example showing interactive and non-TTY are not contradictory
-                logger.warning("No TTY to select the default subscription.")
-                break
-
-            # Nothing is typed, keep current selection
-            if select_index == '':
-                break
-
-            if select_index in self._index_to_subscription_map:
-                active_one = self._index_to_subscription_map[select_index]
-                break
-
-            logger.warning("Invalid selection.")
-            # Let retry
-
-        # Echo the selection
-        tenant_string = self._get_tenant_string(active_one)
-
-        print(f"\nTenant: {tenant_string}\n"
-              f"Subscription: {active_one[_SUBSCRIPTION_NAME]} ({active_one[_SUBSCRIPTION_ID]})\n")
-        return active_one
 
     def _format_subscription_table(self):
         from azure.cli.core.style import format_styled_text, Style
@@ -72,7 +36,10 @@ class SubscriptionSelector:
             index_str = str(index)  # '1', '2', ...
             index_to_subscription_map[index_str] = sub
 
-            is_default = sub is self._active_one
+            is_default = sub[_IS_DEFAULT_SUBSCRIPTION]
+            if is_default:
+                self._active_one = sub
+
             # Trim subscription name if it is too long
             subscription_name = sub[_SUBSCRIPTION_NAME]
             if len(subscription_name) > subscription_name_length_limit:
@@ -91,6 +58,47 @@ class SubscriptionSelector:
 
         self._index_to_subscription_map = index_to_subscription_map
         self._table_str = table_str
+
+    def __call__(self):
+        """Select a subscription.
+        NOTE: The original subscription list is not modified. Call Profile.set_active_subscription to modify it.
+        """
+        print(f'\n[Tenant and subscription selection]\n\n{self._table_str}\n')
+        active_one = self._active_one
+        tenant_string = self._get_tenant_string(active_one)
+        print(f"The default is marked with an {self.DEFAULT_ROW_MARKER}; "
+              f"the default tenant is '{tenant_string}' and subscription is "
+              f"'{active_one[_SUBSCRIPTION_NAME]}' ({active_one[_SUBSCRIPTION_ID]}).\n")
+
+        selected = self._active_one
+        from knack.prompting import prompt, NoTTYException
+
+        # Keep prompting until the user inputs a valid index
+        while True:
+            try:
+                select_index = prompt('Select a subscription and tenant (Type a number or Enter for no changes): ')
+            except NoTTYException:
+                # This is a good example showing interactive and non-TTY are not contradictory
+                logger.warning("No TTY to select the default subscription.")
+                break
+
+            # Nothing is typed, keep current selection
+            if select_index == '':
+                break
+
+            if select_index in self._index_to_subscription_map:
+                selected = self._index_to_subscription_map[select_index]
+                break
+
+            logger.warning("Invalid selection.")
+            # Let retry
+
+        # Echo the selection
+        tenant_string = self._get_tenant_string(selected)
+
+        print(f"\nTenant: {tenant_string}\n"
+              f"Subscription: {selected[_SUBSCRIPTION_NAME]} ({selected[_SUBSCRIPTION_ID]})\n")
+        return selected
 
     @staticmethod
     def _get_tenant_string(subscription):
