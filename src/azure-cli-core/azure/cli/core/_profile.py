@@ -221,22 +221,21 @@ class Profile:
             identity_type = MsiAccountTypes.system_assigned
             from .auth.msal_authentication import ManagedIdentityCredential
             cred = ManagedIdentityCredential()
-            token = cred.get_token(self._arm_scope).token
+            token = cred.get_token(*self._arm_scope).token
         else:
-            import jwt
             from azure.mgmt.core.tools import is_valid_resource_id
             from azure.cli.core.auth.adal_authentication import MSIAuthenticationWrapper
             resource = self.cli_ctx.cloud.endpoints.active_directory_resource_id
 
             if identity_id:
                 if is_valid_resource_id(identity_id):
-                    msi_creds = MSIAuthenticationWrapper(resource=resource, msi_res_id=identity_id)
+                    cred = MSIAuthenticationWrapper(resource=resource, msi_res_id=identity_id)
                     identity_type = MsiAccountTypes.user_assigned_resource_id
                 else:
                     authenticated = False
                     from azure.cli.core.azclierror import AzureResponseError
                     try:
-                        msi_creds = MSIAuthenticationWrapper(resource=resource, client_id=identity_id)
+                        cred = MSIAuthenticationWrapper(resource=resource, client_id=identity_id)
                         identity_type = MsiAccountTypes.user_assigned_client_id
                         authenticated = True
                     except AzureResponseError as ex:
@@ -248,7 +247,7 @@ class Profile:
                     if not authenticated:
                         try:
                             identity_type = MsiAccountTypes.user_assigned_object_id
-                            msi_creds = MSIAuthenticationWrapper(resource=resource, object_id=identity_id)
+                            cred = MSIAuthenticationWrapper(resource=resource, object_id=identity_id)
                             authenticated = True
                         except AzureResponseError as ex:
                             if 'http error: 400, reason: Bad Request' in ex.error_msg:
@@ -261,17 +260,18 @@ class Profile:
 
             else:
                 identity_type = MsiAccountTypes.system_assigned
-                msi_creds = MSIAuthenticationWrapper(resource=resource)
+                cred = MSIAuthenticationWrapper(resource=resource)
 
-            token_entry = msi_creds.token
+            token_entry = cred.token
             token = token_entry['access_token']
 
         logger.info('MSI: token was retrieved. Now trying to initialize local accounts...')
+        import jwt
         decode = jwt.decode(token, algorithms=['RS256'], options={"verify_signature": False})
         tenant = decode['tid']
 
         subscription_finder = SubscriptionFinder(self.cli_ctx)
-        subscriptions = subscription_finder.find_using_specific_tenant(tenant, msi_creds)
+        subscriptions = subscription_finder.find_using_specific_tenant(tenant, cred)
         base_name = ('{}-{}'.format(identity_type, identity_id) if identity_id else identity_type)
         user = _USER_ASSIGNED_IDENTITY if identity_id else _SYSTEM_ASSIGNED_IDENTITY
         if not subscriptions:

@@ -141,7 +141,7 @@ class ServicePrincipalCredential(ConfidentialClientApplication):
         return build_sdk_access_token(result)
 
 
-class ManagedIdentityCredential:
+class ManagedIdentityCredential:  # pylint: disable=too-few-public-methods
     """Currently, only Azure Arc's system-assigned managed identity is supported.
     """
 
