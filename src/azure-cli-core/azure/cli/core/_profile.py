@@ -217,7 +217,7 @@ class Profile:
 
     def login_with_managed_identity(self, identity_id=None, allow_no_subscriptions=None):
         identity_type = None
-        if _on_azure_arc():
+        if _msal_managed_identity():
             identity_type = MsiAccountTypes.system_assigned
             from .auth.msal_authentication import ManagedIdentityCredential
             cred = ManagedIdentityCredential()
@@ -372,7 +372,7 @@ class Profile:
                                      resource=resource)
         else:
             # managed identity
-            if _on_azure_arc():
+            if _msal_managed_identity():
                 from .auth.msal_authentication import ManagedIdentityCredential
                 cred = ManagedIdentityCredential()
             else:
@@ -402,7 +402,7 @@ class Profile:
             if tenant:
                 raise CLIError("Tenant shouldn't be specified for managed identity account")
             from .auth.util import scopes_to_resource
-            if _on_azure_arc():
+            if _msal_managed_identity():
                 from .auth.msal_authentication import ManagedIdentityCredential
                 cred = ManagedIdentityCredential()
             else:
@@ -917,5 +917,9 @@ def _create_identity_instance(cli_ctx, *args, **kwargs):
                     instance_discovery=instance_discovery, **kwargs)
 
 
-def _on_azure_arc():
-    return "IDENTITY_ENDPOINT" in os.environ and "IMDS_ENDPOINT" in os.environ
+def _msal_managed_identity():
+    # Azure Arc
+    if "IDENTITY_ENDPOINT" in os.environ and "IMDS_ENDPOINT" in os.environ:
+        logger.debug("Azure Arc detected")
+        return True
+    return False

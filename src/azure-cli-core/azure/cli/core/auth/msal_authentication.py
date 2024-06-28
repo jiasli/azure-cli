@@ -142,7 +142,11 @@ class ServicePrincipalCredential(ConfidentialClientApplication):
 
 
 class ManagedIdentityCredential:  # pylint: disable=too-few-public-methods
-    """Currently, only Azure Arc's system-assigned managed identity is supported.
+    """Managed identity credential implementing get_token interface.
+
+    It uses MSAL internally.
+
+    Currently, only Azure Arc's system-assigned managed identity is supported.
     """
 
     def __init__(self):
