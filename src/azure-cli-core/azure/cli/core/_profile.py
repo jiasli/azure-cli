@@ -219,7 +219,7 @@ class Profile:
         identity_type = None
         if _msal_managed_identity():
             identity_type = MsiAccountTypes.system_assigned
-            from .auth.msal_authentication import ManagedIdentityCredential
+            from .auth.msal_credentials import ManagedIdentityCredential
             cred = ManagedIdentityCredential()
             token = cred.get_token(*self._arm_scope).token
         else:
@@ -382,8 +382,11 @@ class Profile:
         else:
             # managed identity
             if _msal_managed_identity():
-                from .auth.msal_authentication import ManagedIdentityCredential
-                cred = ManagedIdentityCredential()
+                from .auth.msal_credentials import ManagedIdentityCredential
+                from azure.cli.core.auth.credential_adaptor import CredentialAdaptor
+                mi_cred = ManagedIdentityCredential()
+                # The mi credential must be wrapped by CredentialAdaptor so that it can work with Track 1 SDKs.
+                cred = CredentialAdaptor(mi_cred, resource=resource)
             else:
                 cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
         return (cred,
@@ -412,7 +415,7 @@ class Profile:
                 raise CLIError("Tenant shouldn't be specified for managed identity account")
             from .auth.util import scopes_to_resource
             if _msal_managed_identity():
-                from .auth.msal_authentication import ManagedIdentityCredential
+                from .auth.msal_credentials import ManagedIdentityCredential
                 cred = ManagedIdentityCredential()
             else:
                 cred = MsiAccountTypes.msi_auth_factory(identity_type, identity_id, scopes_to_resource(scopes))
