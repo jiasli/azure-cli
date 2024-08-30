@@ -33,7 +33,7 @@ from ._network import prepare_mysql_exist_private_dns_zone, prepare_mysql_exist_
 from ._validators import mysql_arguments_validator, mysql_auto_grow_validator, mysql_georedundant_backup_validator, mysql_restore_tier_validator, \
     mysql_retention_validator, mysql_sku_name_validator, mysql_storage_validator, validate_mysql_replica, validate_server_name, \
     validate_mysql_tier_update, validate_and_format_restore_point_in_time, validate_public_access_server, mysql_import_single_server_ready_validator, \
-    mysql_import_version_validator, mysql_import_storage_validator
+    mysql_import_version_validator, mysql_import_storage_validator, validate_and_format_maintenance_start_time
 
 logger = get_logger(__name__)
 DELEGATION_SERVICE_NAME = "Microsoft.DBforMySQL/flexibleServers"
@@ -681,6 +681,21 @@ def flexible_server_import_create(cmd, client,
                           None, firewall_name, subnet_id)
 
 
+def flexible_server_import_replica_stop(client, resource_group_name, server_name):
+    try:
+        server_object = client.get(resource_group_name, server_name)
+    except Exception as e:
+        raise ResourceNotFoundError(e)
+
+    server_module_path = server_object.__module__
+    module = import_module(server_module_path)  # replacement not needed for update in flex servers
+    ServerForUpdate = getattr(module, 'ServerForUpdate')
+
+    params = ServerForUpdate(replication_role='None')
+
+    return client.begin_update(resource_group_name, server_name, params)
+
+
 # pylint: disable=too-many-locals, too-many-statements, raise-missing-from
 def flexible_server_restore(cmd, client, resource_group_name, server_name, source_server, restore_point_in_time=None, zone=None,
                             no_wait=False, subnet=None, subnet_address_prefix=None, vnet=None, vnet_address_prefix=None,
@@ -1032,6 +1047,7 @@ def flexible_server_update_custom_func(cmd, client, instance,
 
     if high_availability:
         if high_availability.lower() != "disabled":
+            logger.warning("Enabling High-availability may result in a short downtime for the server based on your server configuration.")
             instance.high_availability.mode = high_availability
             if standby_availability_zone:
                 instance.high_availability.standby_availability_zone = standby_availability_zone
@@ -1134,6 +1150,13 @@ def flexible_server_restart(cmd, client, resource_group_name, server_name, fail_
         client.begin_restart(resource_group_name, server_name, parameters), cmd.cli_ctx, 'MySQL Server Restart')
 
 
+def flexible_server_detach_vnet(cmd, client, resource_group_name, server_name, public_network_access, yes=False):
+    user_confirmation("The operation is irreversible once completed. Note that the server will experience downtime, so it's advisable to schedule your tasks accordingly. "
+                      "Do you want to continue?", yes=yes)
+    parameters = mysql_flexibleservers.models.ServerDetachVNetParameter(public_network_access=public_network_access)
+    return resolve_poller(client.begin_detach_v_net(resource_group_name, server_name, parameters), cmd.cli_ctx, 'MySQL Server Detach VNet')
+
+
 def flexible_server_provision_network_resource(cmd, resource_group_name, server_name,
                                                location, db_context, private_dns_zone_arguments=None, public_access=None,
                                                vnet=None, subnet=None, vnet_address_prefix=None, subnet_address_prefix=None, yes=False):
@@ -1172,6 +1195,23 @@ def flexible_server_provision_network_resource(cmd, resource_group_name, server_
         else:
             network.public_network_access = 'Enabled'
     return network, start_ip, end_ip
+
+
+def flexible_server_maintenance_reschedule(client, resource_group_name, server_name, maintenance_name, maintenance_start_time):
+    validate_and_format_maintenance_start_time(maintenance_start_time)
+    parameters = mysql_flexibleservers.models.MaintenanceUpdate(maintenance_start_time=maintenance_start_time)
+    return client.begin_update(resource_group_name=resource_group_name,
+                               server_name=server_name,
+                               maintenance_name=maintenance_name,
+                               parameters=parameters)
+
+
+def flexible_server_maintenance_list(client, resource_group_name, server_name):
+    return client.list(resource_group_name=resource_group_name, server_name=server_name)
+
+
+def flexible_server_maintenance_show(client, resource_group_name, server_name, maintenance_name):
+    return client.read(resource_group_name=resource_group_name, server_name=server_name, maintenance_name=maintenance_name)
 
 
 def flexible_server_exist_network_resource(cmd, resource_group_name, server_name, location, private_dns_zone_arguments=None, vnet=None, subnet=None):
@@ -1589,10 +1629,7 @@ def flexible_server_identity_assign(cmd, client, resource_group_name, server_nam
     for identity in identities:
         identities_map[identity] = {}
 
-    parameters = {
-        'identity': mysql_flexibleservers.models.MySQLServerIdentity(
-            user_assigned_identities=identities_map,
-            type="UserAssigned")}
+    id_param = mysql_flexibleservers.models.MySQLServerIdentity(user_assigned_identities=identities_map, type="UserAssigned")
 
     replica_operations_client = cf_mysql_flexible_replica(cmd.cli_ctx, '_')
 
@@ -1603,7 +1640,7 @@ def flexible_server_identity_assign(cmd, client, resource_group_name, server_nam
             client.begin_update(
                 resource_group_name=replica_resource_group,
                 server_name=replica.name,
-                parameters=parameters),
+                parameters={'identity': id_param}),
             cmd.cli_ctx, 'Adding identities to replica {}'.format(replica.name)
         )
 
@@ -1611,7 +1648,7 @@ def flexible_server_identity_assign(cmd, client, resource_group_name, server_nam
         client.begin_update(
             resource_group_name=resource_group_name,
             server_name=server_name,
-            parameters=parameters),
+            parameters={'identity': id_param}),
         cmd.cli_ctx, 'Adding identities to server {}'.format(server_name)
     )
 
@@ -1647,14 +1684,9 @@ def flexible_server_identity_remove(cmd, client, resource_group_name, server_nam
 
     if not (instance.identity and instance.identity.user_assigned_identities) or \
        all(key.lower() in [identity.lower() for identity in identities] for key in instance.identity.user_assigned_identities.keys()):
-        parameters = {
-            'identity': mysql_flexibleservers.models.MySQLServerIdentity(
-                type="None")}
+        id_param = mysql_flexibleservers.models.MySQLServerIdentity(type="None")
     else:
-        parameters = {
-            'identity': mysql_flexibleservers.models.MySQLServerIdentity(
-                user_assigned_identities=identities_map,
-                type="UserAssigned")}
+        id_param = mysql_flexibleservers.models.MySQLServerIdentity(user_assigned_identities=identities_map, type="UserAssigned")
 
     replica_operations_client = cf_mysql_flexible_replica(cmd.cli_ctx, '_')
 
@@ -1665,7 +1697,7 @@ def flexible_server_identity_remove(cmd, client, resource_group_name, server_nam
             client.begin_update(
                 resource_group_name=replica_resource_group,
                 server_name=replica.name,
-                parameters=parameters),
+                parameters={'identity': id_param}),
             cmd.cli_ctx, 'Removing identities from replica {}'.format(replica.name)
         )
 
@@ -1673,7 +1705,7 @@ def flexible_server_identity_remove(cmd, client, resource_group_name, server_nam
         client.begin_update(
             resource_group_name=resource_group_name,
             server_name=server_name,
-            parameters=parameters),
+            parameters={'identity': id_param}),
         cmd.cli_ctx, 'Removing identities from server {}'.format(server_name)
     )
 
@@ -1705,10 +1737,7 @@ def flexible_server_ad_admin_set(cmd, client, resource_group_name, server_name, 
     if instance.replication_role == 'Replica':
         raise CLIError("Cannot create an AD admin on a server with replication role. Use the primary server instead.")
 
-    parameters = {
-        'identity': mysql_flexibleservers.models.MySQLServerIdentity(
-            user_assigned_identities={identity: {}},
-            type="UserAssigned")}
+    id_param = mysql_flexibleservers.models.MySQLServerIdentity(user_assigned_identities={identity: {}}, type="UserAssigned")
 
     replicas = list(replica_operations_client.list_by_server(resource_group_name, server_name))
     for replica in replicas:
@@ -1719,7 +1748,7 @@ def flexible_server_ad_admin_set(cmd, client, resource_group_name, server_name, 
                 server_operations_client.begin_update(
                     resource_group_name=replica_resource_group,
                     server_name=replica.name,
-                    parameters=parameters),
+                    parameters={'identity': id_param}),
                 cmd.cli_ctx, 'Adding identity {} to replica {}'.format(identity, replica.name)
             )
 
@@ -1729,7 +1758,7 @@ def flexible_server_ad_admin_set(cmd, client, resource_group_name, server_name, 
             server_operations_client.begin_update(
                 resource_group_name=resource_group_name,
                 server_name=server_name,
-                parameters=parameters),
+                parameters={'identity': id_param}),
             cmd.cli_ctx, 'Adding identity {} to server {}'.format(identity, server_name))
 
     parameters = {

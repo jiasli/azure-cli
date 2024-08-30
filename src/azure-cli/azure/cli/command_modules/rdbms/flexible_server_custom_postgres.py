@@ -200,8 +200,6 @@ def flexible_server_restore(cmd, client,
     else:
         source_server_id = source_server
 
-    instance = client.get(resource_group_name, source_server)
-
     restore_point_in_time = validate_and_format_restore_point_in_time(restore_point_in_time)
 
     try:
@@ -222,6 +220,7 @@ def flexible_server_restore(cmd, client,
 
         pg_byok_validator(byok_identity, byok_key, backup_byok_identity, backup_byok_key, geo_redundant_backup)
 
+        instance = client.get(resource_group_name, id_parts['name'])
         storage = postgresql_flexibleservers.models.Storage(type=storage_type if instance.storage.type != "PremiumV2_LRS" else None)
 
         parameters = postgresql_flexibleservers.models.Server(
@@ -360,13 +359,14 @@ def flexible_server_update_custom_func(cmd, client, instance,
     if backup_retention:
         instance.backup.backup_retention_days = backup_retention
 
-    if maintenance_window and maintenance_window.lower() == "disabled":
-        # if disabled is pass in reset to default values
-        day_of_week = start_hour = start_minute = 0
-        custom_window = "Disabled"
-    elif maintenance_window:
-        day_of_week, start_hour, start_minute = parse_maintenance_window(maintenance_window)
-        custom_window = "Enabled"
+    if maintenance_window:
+        if maintenance_window.lower() == "disabled":
+            # if disabled is pass in reset to default values
+            day_of_week = start_hour = start_minute = 0
+            custom_window = "Disabled"
+        else:
+            day_of_week, start_hour, start_minute = parse_maintenance_window(maintenance_window)
+            custom_window = "Enabled"
 
         # set values - if maintenance_window when is None when created then create a new object
         instance.maintenance_window.day_of_week = day_of_week
