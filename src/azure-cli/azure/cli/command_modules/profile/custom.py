@@ -159,7 +159,7 @@ def login(cmd, username=None, password=None, tenant=None, scopes=None, allow_no_
     if service_principal:
         from azure.cli.core.auth.identity import ServicePrincipalAuth
         password = ServicePrincipalAuth.build_credential(
-            secret_or_certificate=password, client_assertion=client_assertion,
+            client_secret=password, client_assertion=client_assertion,
             certificate=certificate, use_cert_sn_issuer=use_cert_sn_issuer)
 
     login_experience_v2 = cmd.cli_ctx.config.getboolean('core', 'login_experience_v2', fallback=True)

@@ -265,18 +265,12 @@ class TestServicePrincipalAuth(unittest.TestCase):
 
     def test_build_credential(self):
         # secret
-        cred = ServicePrincipalAuth.build_credential(secret_or_certificate="test_secret")
+        cred = ServicePrincipalAuth.build_credential(client_secret="test_secret")
         assert cred == {"client_secret": "test_secret"}
 
         # secret with '~', which is preserved as-is
-        cred = ServicePrincipalAuth.build_credential(secret_or_certificate="~test_secret")
+        cred = ServicePrincipalAuth.build_credential(client_secret="~test_secret")
         assert cred == {"client_secret": "~test_secret"}
-
-        # certificate as password (deprecated)
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        test_cert_file = os.path.join(current_dir, 'sp_cert.pem')
-        cred = ServicePrincipalAuth.build_credential(secret_or_certificate=test_cert_file)
-        assert cred == {'certificate': test_cert_file}
 
         # certificate
         current_dir = os.path.dirname(os.path.realpath(__file__))
