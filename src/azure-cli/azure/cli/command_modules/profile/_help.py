@@ -21,8 +21,8 @@ long-summary: >-
     For more details, see https://go.microsoft.com/fwlink/?linkid=2276314
 
 
-    [WARNING] Using --password to pass service principal certificate is deprecated and will be removed in a
-    future release. Use --certificate instead.
+    [WARNING] Passing the service principal certificate with `--password` is deprecated and will be removed in a
+    future release. Please use `--certificate` instead.
 
 
     To log in with a service principal, specify --service-principal.
