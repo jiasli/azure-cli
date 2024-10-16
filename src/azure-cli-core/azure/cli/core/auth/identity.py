@@ -39,8 +39,7 @@ WAM_PROMPT = (
     "For more information on login with Azure CLI, see https://go.microsoft.com/fwlink/?linkid=2271136")
 
 PASSWORD_CERTIFICATE_WARNING = (
-    "Using --password to pass service principal certificate is deprecated and will be removed in a "
-    "future release. Use --certificate instead.")
+    "Passing the service principal certificate with `--password` is deprecated and will be removed in a future release. Please use `--certificate` instead.")
 
 logger = get_logger(__name__)
 
