@@ -125,14 +125,9 @@ class CloudShellCredential:  # pylint: disable=too-few-public-methods
             #   token_cache=...
         )
 
-    def get_token(self, *scopes, **kwargs):  # pylint: disable=no-self-use
+    def get_token(self, *scopes, **kwargs):
         logger.debug("CloudShellCredential.get_token: scopes=%r, kwargs=%r", scopes, kwargs)
-        # kwargs should be selectively passed to MSAL to avoid SDK passing unrecognized arguments
-        if 'data' in kwargs:
-            # Get a VM SSH certificate
-            result = self._msal_app.acquire_token_interactive(list(scopes), prompt="none", data=kwargs["data"])
-        else:
-            # Get an access token
-            result = self._msal_app.acquire_token_interactive(list(scopes), prompt="none")
+        # kwargs is already sanitized by CredentialAdaptor, so it can be safely passed to MSAL
+        result = self._msal_app.acquire_token_interactive(list(scopes), prompt="none", **kwargs)
         check_result(result, scopes=scopes)
         return build_sdk_access_token(result)
