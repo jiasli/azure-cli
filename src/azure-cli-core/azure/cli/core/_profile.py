@@ -413,7 +413,8 @@ class Profile:
             credential = self._create_credential(account, client_id=client_id)
             external_credentials = []
             for external_tenant in external_tenants:
-                external_credentials.append(self._create_credential(account, external_tenant, client_id=client_id))
+                external_credentials.append(self._create_credential(account, tenant_id=external_tenant,
+                                                                    client_id=client_id))
             from azure.cli.core.auth.credential_adaptor import CredentialAdaptor
             cred = CredentialAdaptor(credential,
                                      auxiliary_credentials=external_credentials,
@@ -460,7 +461,7 @@ class Profile:
                                                         scopes_to_resource(scopes))
 
         else:
-            cred = self._create_credential(account, tenant)
+            cred = self._create_credential(account, tenant_id=tenant)
 
         sdk_token = cred.get_token(*scopes)
         # Convert epoch int 'expires_on' to datetime string 'expiresOn' for backward compatibility
@@ -665,7 +666,7 @@ class Profile:
         """
         user_type = account[_USER_ENTITY][_USER_TYPE]
         username_or_sp_id = account[_USER_ENTITY][_USER_NAME]
-        tenant_id = tenant_id if tenant_id else account[_TENANT_ID]
+        tenant_id = tenant_id or account[_TENANT_ID]
         identity = _create_identity_instance(self.cli_ctx, self._authority, tenant_id=tenant_id, client_id=client_id)
 
         # User
@@ -694,7 +695,7 @@ class Profile:
             tenant = s[_TENANT_ID]
             subscriptions = []
             try:
-                identity_credential = self._create_credential(s, tenant)
+                identity_credential = self._create_credential(s, tenant_id=tenant)
                 if is_service_principal:
                     subscriptions = subscription_finder.find_using_specific_tenant(tenant, identity_credential)
                 else:
@@ -938,7 +939,7 @@ def _transform_subscription_for_multiapi(s, s_dict):
             s_dict[_MANAGED_BY_TENANTS] = [{_TENANT_ID: t.tenant_id} for t in s.managed_by_tenants]
 
 
-def _create_identity_instance(cli_ctx, *args, **kwargs):
+def _create_identity_instance(cli_ctx, authority, tenant_id=None, client_id=None):
     """Lazily import and create Identity instance to avoid unnecessary imports."""
     from .auth.identity import Identity
     from .util import should_encrypt_token_cache
@@ -955,9 +956,11 @@ def _create_identity_instance(cli_ctx, *args, **kwargs):
     # PREVIEW: In Azure Stack environment, use core.instance_discovery=false to disable MSAL's instance discovery.
     instance_discovery = cli_ctx.config.getboolean('core', 'instance_discovery', True)
 
-    return Identity(*args, encrypt=encrypt, use_msal_http_cache=use_msal_http_cache,
+    return Identity(authority, tenant_id=tenant_id, client_id=client_id,
+                    encrypt=encrypt,
+                    use_msal_http_cache=use_msal_http_cache,
                     enable_broker_on_windows=enable_broker_on_windows,
-                    instance_discovery=instance_discovery, **kwargs)
+                    instance_discovery=instance_discovery)
 
 
 def _on_azure_arc_windows():
