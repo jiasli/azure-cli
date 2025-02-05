@@ -36,7 +36,7 @@ class CredentialAdaptor:
         if 'data' in kwargs:
             filtered_kwargs['data'] = kwargs['data']
 
-        return self._credential.get_token(scopes, **filtered_kwargs)
+        return self._credential.get_token(*scopes, **filtered_kwargs)
 
     def get_auxiliary_tokens(self, *scopes, **kwargs):
         """Get access tokens from auxiliary credentials."""
