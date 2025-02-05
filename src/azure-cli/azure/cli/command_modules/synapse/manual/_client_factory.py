@@ -108,10 +108,7 @@ def synapse_spark_factory(cli_ctx, workspace_name, sparkpool_name):
     from azure.cli.core.commands.client_factory import get_subscription_id
     subscription_id = get_subscription_id(cli_ctx)
     profile = Profile(cli_ctx=cli_ctx)
-    cred, _, _ = profile.get_login_credentials(
-        resource=cli_ctx.cloud.endpoints.synapse_analytics_resource_id,
-        subscription_id=subscription_id
-    )
+    cred, _, _ = profile.get_login_credentials(subscription_id=subscription_id)
     return SparkClient(
         credential=cred,
         endpoint='{}{}{}'.format("https://", workspace_name, cli_ctx.cloud.suffixes.synapse_analytics_endpoint),
@@ -133,10 +130,7 @@ def synapse_accesscontrol_factory(cli_ctx, workspace_name):
     from azure.cli.core.commands.client_factory import get_subscription_id
     subscription_id = get_subscription_id(cli_ctx)
     profile = Profile(cli_ctx=cli_ctx)
-    cred, _, _ = profile.get_login_credentials(
-        resource=cli_ctx.cloud.endpoints.synapse_analytics_resource_id,
-        subscription_id=subscription_id
-    )
+    cred, _, _ = profile.get_login_credentials(subscription_id=subscription_id)
     return AccessControlClient(
         credential=cred,
         endpoint='{}{}{}'.format("https://", workspace_name, cli_ctx.cloud.suffixes.synapse_analytics_endpoint)
@@ -163,10 +157,7 @@ def cf_synapse_client_artifacts_factory(cli_ctx, workspace_name):
     from azure.cli.core.commands.client_factory import get_subscription_id
     subscription_id = get_subscription_id(cli_ctx)
     profile = Profile(cli_ctx=cli_ctx)
-    cred, _, _ = profile.get_login_credentials(
-        resource=cli_ctx.cloud.endpoints.synapse_analytics_resource_id,
-        subscription_id=subscription_id
-    )
+    cred, _, _ = profile.get_login_credentials(subscription_id=subscription_id)
     return ArtifactsClient(
         credential=cred,
         endpoint='{}{}{}'.format("https://", workspace_name, cli_ctx.cloud.suffixes.synapse_analytics_endpoint)
@@ -219,10 +210,7 @@ def cf_synapse_client_managedprivateendpoints_factory(cli_ctx, workspace_name):
     from azure.cli.core.commands.client_factory import get_subscription_id
     subscription_id = get_subscription_id(cli_ctx)
     profile = Profile(cli_ctx=cli_ctx)
-    cred, _, _ = profile.get_login_credentials(
-        resource=cli_ctx.cloud.endpoints.synapse_analytics_resource_id,
-        subscription_id=subscription_id
-    )
+    cred, _, _ = profile.get_login_credentials(subscription_id=subscription_id)
     return VnetClient(
         credential=cred,
         endpoint='{}{}{}'.format("https://", workspace_name, cli_ctx.cloud.suffixes.synapse_analytics_endpoint)

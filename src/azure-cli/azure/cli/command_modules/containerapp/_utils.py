@@ -412,10 +412,9 @@ def parse_secret_flags(secret_list):
 
 
 def get_linker_client(cmd):
-    resource = cmd.cli_ctx.cloud.endpoints.active_directory_resource_id
     profile = Profile(cli_ctx=cmd.cli_ctx)
     credential, subscription_id, _ = profile.get_login_credentials(
-        subscription_id=get_subscription_id(cmd.cli_ctx), resource=resource)
+        subscription_id=get_subscription_id(cmd.cli_ctx))
     linker_client = ServiceLinkerManagementClient(credential)
     return linker_client
 

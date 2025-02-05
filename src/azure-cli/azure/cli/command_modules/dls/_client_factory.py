@@ -28,9 +28,7 @@ def cf_dls_filesystem(cli_ctx, account_name):
 
     profile = Profile(cli_ctx=cli_ctx)
     subscription_id = None
-    cred, subscription_id, _ = profile.get_login_credentials(
-        subscription_id=subscription_id,
-        resource=cli_ctx.cloud.endpoints.active_directory_data_lake_resource_id)
+    cred, subscription_id, _ = profile.get_login_credentials(subscription_id=subscription_id)
     return core.AzureDLFileSystem(
         token=cred,
         store_name=account_name,
