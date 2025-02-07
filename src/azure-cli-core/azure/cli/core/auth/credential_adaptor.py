@@ -3,11 +3,7 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-import requests
 from knack.log import get_logger
-from knack.util import CLIError
-
-from .util import resource_to_scopes
 
 logger = get_logger(__name__)
 
