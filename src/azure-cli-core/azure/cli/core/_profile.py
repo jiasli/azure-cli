@@ -1023,7 +1023,7 @@ def _use_msal_managed_identity(cli_ctx):
     # This indicates an Azure Arc-enabled server
     from msal.managed_identity import get_managed_identity_source, AZURE_ARC
     from azure.cli.core.telemetry import set_use_msal_managed_identity
-    # PREVIEW: Use core.use_msal_managed_identity=true to enable managed identity authentication with MSAL
-    use_msal_managed_identity = cli_ctx.config.getboolean('core', 'use_msal_managed_identity', fallback=False)
+    # Use core.use_msal_managed_identity=false to use the old msrestazure managed identity implementation
+    use_msal_managed_identity = cli_ctx.config.getboolean('core', 'use_msal_managed_identity', fallback=True)
     set_use_msal_managed_identity(use_msal_managed_identity)
     return use_msal_managed_identity or get_managed_identity_source() == AZURE_ARC
